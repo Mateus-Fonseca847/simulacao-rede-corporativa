@@ -1,0 +1,6 @@
+# Packet Tracer
+*.pkz
+*.pkt.bak
+*~
+.DS_Store
+Thumbs.db
