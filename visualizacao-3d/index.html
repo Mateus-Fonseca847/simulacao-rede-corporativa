@@ -1,0 +1,771 @@
+<title>Mapa 3D da rede</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: faixa de filtros, cena 3D à esquerda e painel de detalhe à direita; empilha no celular. */
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --fg:#18202C; --muted:#586374; --line:#D3D9E2;
+  --accent:#4B43B5; --on-accent:#FFFFFF; --accent-soft:#E7E5F8;
+  --ok:#16794C; --ok-soft:#DDF3E8; --bad:#B42C32; --bad-soft:#FBE4E5;
+  --slab:#C9D1DC; --edge:#5A6678; --link:#8A94A3;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151D; --surface:#171E29; --fg:#E6EBF2; --muted:#9AA6B7; --line:#2A3443;
+    --accent:#9A93F0; --on-accent:#10151D; --accent-soft:#2A2750;
+    --ok:#5FD19B; --ok-soft:#173627; --bad:#FF8A8E; --bad-soft:#3E1D1F;
+    --slab:#2B3646; --edge:#8D9AAE; --link:#6F7B8E; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151D; --surface:#171E29; --fg:#E6EBF2; --muted:#9AA6B7; --line:#2A3443;
+  --accent:#9A93F0; --on-accent:#10151D; --accent-soft:#2A2750;
+  --ok:#5FD19B; --ok-soft:#173627; --bad:#FF8A8E; --bad-soft:#3E1D1F;
+  --slab:#2B3646; --edge:#8D9AAE; --link:#6F7B8E; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font:15px/1.55 var(--font);
+  padding-block:20px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:24px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:18px;font-weight:600;margin:0;text-wrap:balance}
+h3{font-size:12px;font-weight:600;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+p{margin:0}
+.sub{color:var(--muted);max-width:68ch}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar .lab{font-size:13px;color:var(--muted);margin-right:2px}
+.chip,.btn{
+  font:inherit;font-size:13px;line-height:1;padding:8px 11px;border:1px solid var(--line);
+  background:var(--surface);color:var(--fg);border-radius:6px;cursor:pointer;
+}
+.chip:hover,.btn:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip:focus-visible,.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{
+  position:relative;height:clamp(380px,64vh,620px);border:1px solid var(--line);
+  border-radius:8px;background:var(--surface);overflow:hidden;
+}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{
+  position:absolute;left:0;top:0;font-size:11px;line-height:1.2;white-space:nowrap;color:var(--fg);
+  background:color-mix(in srgb,var(--surface) 82%,transparent);padding:1px 5px;border-radius:4px;
+}
+.lbl.floor{font-weight:600;color:var(--muted);background:none;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.hud{position:absolute;top:10px;right:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.hud label{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;background:var(--surface);padding:6px 8px;border:1px solid var(--line);border-radius:6px}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12px;color:var(--muted);max-width:calc(100% - 20px)}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:6px}
+.msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.row input[type=range]{width:180px;max-width:100%}
+.panel{
+  border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px;
+  display:flex;flex-direction:column;gap:14px;min-width:0;
+}
+.panel select{font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%}
+.tag{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 7px;margin-left:8px;vertical-align:middle;font-weight:400}
+dl{margin:0;display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:6px 12px}
+dt{color:var(--muted);font-size:13px}
+dd{margin:0;font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--fg)}
+.q{font-weight:500}
+.flowbox{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.flowbox.ok{background:var(--ok-soft);border-color:var(--ok)}
+.flowbox.bad{background:var(--bad-soft);border-color:var(--bad)}
+.flowbox .state{font-weight:600}
+.flowbox.ok .state{color:var(--ok)}
+.flowbox.bad .state{color:var(--bad)}
+.path{font-size:13px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);max-width:90ch}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .stage{height:clamp(340px,56vh,520px)}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Mapa 3D da rede</h1>
+  </header>
+
+  <div class="bar" role="group" aria-label="Filtrar por VLAN" id="vlanBar"><span class="lab">Filtrar por VLAN</span></div>
+
+  <div class="app">
+    <div class="col">
+      <div class="stage" id="stage">
+        <div class="labels" id="labels"></div>
+        <div class="hud">
+          <button class="btn" id="btnReset" type="button">Resetar vista</button>
+          <button class="btn" id="btnIn" type="button" aria-label="Aproximar">+</button>
+          <button class="btn" id="btnOut" type="button" aria-label="Afastar">−</button>
+          <label><input type="checkbox" id="chkLabels" checked> Rótulos</label>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="sw" style="background:#6C63D6"></i>Equipamento de rede</span>
+          <span><i class="sw" style="background:#1FA37A"></i>Dispositivos internos</span>
+          <span><i class="sw" style="background:#E0663A"></i>VLAN isolada por ACL</span>
+        </div>
+      </div>
+      <div class="bar" role="group" aria-label="Fluxos de teste" id="flowBar"><span class="lab">Fluxos de teste</span></div>
+      <div class="row">
+        <label for="gap" class="lab" style="font-size:13px;color:var(--muted)">Distância entre andares</label>
+        <input type="range" id="gap" min="2.4" max="6" step="0.1" value="3.6">
+      </div>
+    </div>
+
+    <aside class="panel" id="panel" aria-live="polite">
+      <div id="flowBox" hidden></div>
+      <div>
+        <label for="devSelect" class="lab" style="font-size:13px;color:var(--muted)">Equipamento</label>
+        <select id="devSelect"></select>
+      </div>
+      <div id="info"></div>
+    </aside>
+  </div>
+
+  <p class="note">Endereços e regras de acesso seguem os arquivos de <code>docs/</code> do repositório. A matriz de acesso é um rascunho até os testes das etapas 1 a 5 passarem no Packet Tracer.</p>
+</div>
+
+<script id="rede-data" type="application/json">
+{
+  "floors": [
+    {"id": 0, "name": "Térreo"},
+    {"id": 1, "name": "1º andar"},
+    {"id": 2, "name": "2º andar"}
+  ],
+  "vlans": [
+    {"id": 10, "name": "Dados"},
+    {"id": 20, "name": "Voz"},
+    {"id": 30, "name": "Wi-Fi func."},
+    {"id": 40, "name": "Wi-Fi público"},
+    {"id": 50, "name": "IoT"},
+    {"id": 60, "name": "Datacenter"},
+    {"id": 99, "name": "Gerência"}
+  ],
+  "devices": [
+    {"id": "internet", "name": "Internet", "title": "Internet (simulada)", "kind": "cloud", "cls": "ext", "floor": 1, "floorLabel": "Fora do prédio", "pos": [11.5, -2.6], "vlans": [10, 30, 40, 60],
+     "role": "Destino externo. No Packet Tracer é um ponto simulado atrás do roteador de borda.",
+     "props": [["Link com o roteador", "10.10.255.0/30"]],
+     "defense": ["Por que usar NAT/PAT?", "Os endereços 10.x são privados (RFC 1918) e não são roteados na internet. O PAT permite que muitas máquinas internas compartilhem um único endereço público, distinguidas por número de porta."]},
+    {"id": "router", "name": "Roteador", "title": "Roteador de borda", "kind": "router", "cls": "gear", "floor": 1, "pos": [5.8, -2.6], "vlans": [10, 30, 40, 60],
+     "role": "Faz NAT/PAT, a rota padrão para a internet e a telefonia dos ramais.",
+     "props": [["Endereço no link", "10.10.255.1/30"], ["Liga em", "Core L3, porta Gi1/0/24"], ["Etapas", "2 (rotas) e 5 (NAT)"]],
+     "defense": ["Por que a telefonia fica no roteador?", "No Packet Tracer o próprio roteador pode atuar como central telefônica (Call Manager Express). Os telefones se registram nele e ganham um ramal."]},
+    {"id": "core", "name": "Core L3", "title": "Core L3", "kind": "core", "cls": "gear", "floor": 1, "pos": [1.0, 0], "vlans": [10, 20, 30, 40, 50, 60, 99],
+     "role": "Roteia entre todas as VLANs com uma interface virtual (SVI) por VLAN, aplica as ACLs e faz o relay do DHCP.",
+     "props": [["Gerência (VLAN 99)", "10.10.10.129"], ["Gateways (SVIs)", "10.10.0.1, 10.10.2.1, 10.10.4.1, 10.10.8.1, 10.10.10.1, 10.10.10.65"], ["Uplinks", "Gi1/0/1-4, trunks com nativa 998"], ["Modelo no PT", "Multilayer 3650-24PS ou 3560-24PS"]],
+     "defense": ["Por que switch L3 e não router-on-a-stick?", "No router-on-a-stick todo o tráfego entre VLANs passa por um único trunk até o roteador, que vira gargalo. O switch L3 roteia internamente, com uma SVI por VLAN, e escala melhor."]},
+    {"id": "swT", "name": "SW-T", "title": "Switch de acesso do térreo", "kind": "switch", "cls": "gear", "floor": 0, "pos": [-4.5, 0], "vlans": [30, 40, 50, 99],
+     "role": "Atende só os APs e a copa. O térreo tombado não tem estações cabeadas.",
+     "props": [["Gerência (VLAN 99)", "10.10.10.134"], ["Uplink", "Gi0/1, VLANs 30, 40, 50, 99"], ["Portas", "Fa0/1 AP func., Fa0/2 AP público, Fa0/3 IoT"]],
+     "defense": ["Por que o térreo só tem Wi-Fi?", "É um prédio tombado: não pode ter piso elevado nem bandejamento. O enunciado só exige Ethernet e VoIP nos andares 1 e 2, então no térreo o cabeamento fica no mínimo (uplink, PoE dos APs e a copa)."]},
+    {"id": "swDC", "name": "SW-DC", "title": "Switch do datacenter", "kind": "switch", "cls": "gear", "floor": 1, "pos": [-3.5, -2.8], "vlans": [60, 99],
+     "role": "Liga os servidores à VLAN 60 e o PC de administração à VLAN 99.",
+     "props": [["Gerência (VLAN 99)", "10.10.10.131"], ["Uplink", "Gi0/1, VLANs 60 e 99"], ["Portas", "Fa0/1 DHCP, Fa0/2 DNS, Fa0/3 IoT, Fa0/24 PC admin"]],
+     "defense": ["Como o datacenter fica protegido?", "Está na VLAN 60. O core só deixa Dados e Wi-Fi de funcionários chegarem lá, e o datacenter não inicia conexões para as VLANs de usuário."]},
+    {"id": "swA1", "name": "SW-A1", "title": "Switch de acesso do 1º andar", "kind": "switch", "cls": "gear", "floor": 1, "pos": [-3.5, 2.8], "vlans": [10, 20, 30, 50, 99],
+     "role": "Atende as estações com telefone, um AP e a copa do 1º andar.",
+     "props": [["Gerência (VLAN 99)", "10.10.10.132"], ["Uplink", "Gi0/1, VLANs 10, 20, 30, 50, 99"], ["Portas", "Fa0/1-9 PC e fone, Fa0/20 AP, Fa0/21 IoT"]],
+     "defense": ["Como telefone e PC dividem a mesma porta?", "A porta é de acesso na VLAN 10 e tem a voice VLAN 20. O telefone marca a voz com a tag da VLAN 20 e repassa o tráfego do PC sem tag."]},
+    {"id": "swA2", "name": "SW-A2", "title": "Switch de acesso do 2º andar", "kind": "switch", "cls": "gear", "floor": 2, "pos": [-3.5, 0], "vlans": [10, 20, 30, 50, 99],
+     "role": "Atende as estações com telefone, um AP e a copa do 2º andar.",
+     "props": [["Gerência (VLAN 99)", "10.10.10.133"], ["Uplink", "Gi0/1, VLANs 10, 20, 30, 50, 99"], ["Portas", "Fa0/1-15 PC e fone, Fa0/20 AP, Fa0/21 IoT"]],
+     "defense": ["Por que a VLAN permitida é diferente em cada uplink?", "Menor privilégio: cada trunk leva só as VLANs que o andar usa. O térreo, por exemplo, nunca recebe as VLANs 10 e 20."]},
+    {"id": "srv", "name": "Servidores", "title": "Servidores do datacenter", "kind": "server", "cls": "inner", "floor": 1, "pos": [-6.4, -2.8], "vlans": [60],
+     "role": "DHCP, DNS e controlador IoT, todos na VLAN 60.",
+     "props": [["Sub-rede", "10.10.10.64/26"], ["DHCP", "10.10.10.66"], ["DNS", "10.10.10.67"], ["Controlador IoT", "10.10.10.68 (a definir)"]],
+     "defense": ["Como o DHCP atende outras VLANs?", "O broadcast do DHCP não atravessa VLANs. O ip helper-address na SVI de cada VLAN converte o pedido em unicast para o servidor no datacenter."]},
+    {"id": "pcs1", "name": "PCs + fones", "title": "Estações do 1º andar", "kind": "pcs", "cls": "inner", "floor": 1, "pos": [-6.4, 2.8], "vlans": [10, 20],
+     "role": "Cada estação tem um PC e um telefone IP na mesma porta do switch.",
+     "props": [["Na simulação", "9 estações (projeto: 90)"], ["Dados (VLAN 10)", "10.10.0.0/23"], ["Voz (VLAN 20)", "10.10.2.0/23"]],
+     "defense": ["Como a rede suporta 300 se você simulou 30?", "O enunciado pede 10% da carga simulada, mantendo a capacidade total. Os blocos de endereço, os escopos DHCP e a quantidade de portas foram calculados para os 300, com 30% de margem."]},
+    {"id": "pcs2", "name": "PCs + fones", "title": "Estações do 2º andar", "kind": "pcs", "cls": "inner", "floor": 2, "pos": [-6.4, 0], "vlans": [10, 20],
+     "role": "Cada estação tem um PC e um telefone IP na mesma porta do switch.",
+     "props": [["Na simulação", "15 estações (projeto: 150)"], ["Dados (VLAN 10)", "10.10.0.0/23"], ["Voz (VLAN 20)", "10.10.2.0/23"]],
+     "defense": ["Por que VLAN por função e não por andar?", "Quem muda de andar não muda de rede, e a política de segurança é uma só para o prédio inteiro. O endereço também indica o papel do dispositivo."]},
+    {"id": "apF0", "name": "AP func.", "title": "AP de funcionários (térreo)", "kind": "ap", "cls": "inner", "floor": 0, "pos": [-0.5, -2.8], "vlans": [30],
+     "role": "Anuncia o SSID corporativo. Os 60 funcionários do térreo se conectam por aqui.",
+     "props": [["VLAN", "30, 10.10.4.0/22"], ["Porta", "SW-T Fa0/1 (acesso)"], ["Segurança", "WPA2 (aula 26)"]],
+     "defense": ["Como o Wi-Fi de funcionários e o do público ficam separados?", "No Packet Tracer, um AP por SSID, cada um em porta de acesso da sua VLAN (30 e 40). Na vida real, um AP anuncia vários SSIDs mapeados a VLANs pelo trunk."]},
+    {"id": "apP0", "name": "AP público", "title": "AP do público (térreo)", "kind": "ap", "cls": "iso", "floor": 0, "pos": [-0.5, 2.8], "vlans": [40],
+     "role": "Anuncia o SSID dos visitantes do espaço de exposições, isolado do resto da rede.",
+     "props": [["VLAN", "40, 10.10.8.0/23"], ["Porta", "SW-T Fa0/2 (acesso)"], ["DNS", "Externo, sem acesso ao datacenter"]],
+     "defense": ["Como o visitante é impedido de chegar ao datacenter?", "Ele está na VLAN 40, um domínio de broadcast separado. Para sair dela o tráfego passa pelo core, onde uma ACL só permite saída para a internet."]},
+    {"id": "ap1", "name": "AP func.", "title": "AP de funcionários (1º andar)", "kind": "ap", "cls": "inner", "floor": 1, "pos": [1.2, 3.4], "vlans": [30],
+     "role": "SSID corporativo do 1º andar. Notebooks e celulares dos funcionários se conectam por aqui.",
+     "props": [["VLAN", "30, 10.10.4.0/22"], ["Porta", "SW-A1 Fa0/20 (acesso)"], ["Energia", "PoE (802.3af)"]],
+     "defense": ["Para que serve o PoE?", "Entrega dados e energia no mesmo cabo (802.3af até 15,4 W; 802.3at até 30 W). Alimenta APs e telefones sem tomada ao lado de cada ponto."]},
+    {"id": "ap2", "name": "AP func.", "title": "AP de funcionários (2º andar)", "kind": "ap", "cls": "inner", "floor": 2, "pos": [0, -2.8], "vlans": [30],
+     "role": "SSID corporativo do 2º andar.",
+     "props": [["VLAN", "30, 10.10.4.0/22"], ["Porta", "SW-A2 Fa0/20 (acesso)"], ["Energia", "PoE (802.3af)"]],
+     "defense": ["Quantos dispositivos o Wi-Fi corporativo comporta?", "A VLAN 30 é um /22: 1022 endereços úteis para 600 dispositivos previstos (2 por funcionário), com 59% de ocupação."]},
+    {"id": "iot0", "name": "Copa IoT", "title": "Copa automatizada (térreo)", "kind": "iot", "cls": "iso", "floor": 0, "pos": [-4.5, 3.4], "vlans": [50],
+     "role": "Dispositivos IoT da copa, isolados em uma VLAN própria.",
+     "props": [["VLAN", "50, 10.10.10.0/26"], ["Porta", "SW-T Fa0/3 (acesso)"], ["Fala com", "Só o controlador IoT"]],
+     "defense": ["Por que isolar o IoT?", "Dispositivos de copa costumam ter software desatualizado e pouca segurança. Isolados, se um for comprometido o invasor está numa VLAN sem acesso ao resto da rede."]},
+    {"id": "iot1", "name": "Copa IoT", "title": "Copa automatizada (1º andar)", "kind": "iot", "cls": "iso", "floor": 1, "pos": [4.0, 3.2], "vlans": [50],
+     "role": "Dispositivos IoT da copa do 1º andar.",
+     "props": [["VLAN", "50, 10.10.10.0/26"], ["Porta", "SW-A1 Fa0/21 (acesso)"], ["Fala com", "Só o controlador IoT"]],
+     "defense": ["Quantos dispositivos IoT cabem?", "A VLAN 50 é um /26: 62 endereços úteis para 30 previstos (3 copas, cerca de 10 cada), com 48% de ocupação."]},
+    {"id": "iot2", "name": "Copa IoT", "title": "Copa automatizada (2º andar)", "kind": "iot", "cls": "iso", "floor": 2, "pos": [0, 2.8], "vlans": [50],
+     "role": "Dispositivos IoT da copa do 2º andar.",
+     "props": [["VLAN", "50, 10.10.10.0/26"], ["Porta", "SW-A2 Fa0/21 (acesso)"], ["Fala com", "Só o controlador IoT"]],
+     "defense": ["Por que o IoT não fala com os PCs?", "A ACL na entrada da SVI da VLAN 50 só permite o controlador no datacenter. Qualquer outro destino é descartado no core."]},
+    {"id": "staff0", "name": "Func. Wi-Fi", "title": "Funcionários do térreo", "kind": "people", "cls": "inner", "floor": 0, "pos": [3.8, -2.8], "vlans": [30],
+     "role": "As 60 posições de trabalho do térreo, todas por Wi-Fi.",
+     "props": [["Na simulação", "6 dispositivos (projeto: 60)"], ["VLAN", "30, 10.10.4.0/22"]],
+     "defense": ["O que é o BSS e o ESS aqui?", "Cada AP forma um BSS (sua célula de cobertura). O conjunto de APs ligados pela rede cabeada forma um ESS, e o roaming entre eles é BSS-transition (aula 20)."]},
+    {"id": "visit", "name": "Visitantes", "title": "Público do espaço de exposições", "kind": "people", "cls": "iso", "floor": 0, "pos": [3.8, 2.8], "vlans": [40],
+     "role": "Visitantes no Wi-Fi do público. Só têm saída para a internet.",
+     "props": [["Na simulação", "2 a 3 dispositivos (projeto: 300)"], ["VLAN", "40, 10.10.8.0/23"]],
+     "defense": ["Como a VLAN 40 comporta 300 visitantes?", "É um /23: 510 endereços úteis para 300 simultâneos (390 com a margem de 30%), 59% de ocupação."]}
+  ],
+  "links": [
+    {"a": "internet", "b": "router", "type": "wan", "vlans": [10, 30, 40, 60]},
+    {"a": "router", "b": "core", "type": "p2p", "vlans": [10, 30, 40, 60]},
+    {"a": "core", "b": "swT", "type": "trunk", "vlans": [30, 40, 50, 99]},
+    {"a": "core", "b": "swDC", "type": "trunk", "vlans": [60, 99]},
+    {"a": "core", "b": "swA1", "type": "trunk", "vlans": [10, 20, 30, 50, 99]},
+    {"a": "core", "b": "swA2", "type": "trunk", "vlans": [10, 20, 30, 50, 99]},
+    {"a": "swT", "b": "apF0", "type": "access", "vlans": [30]},
+    {"a": "swT", "b": "apP0", "type": "access", "vlans": [40]},
+    {"a": "swT", "b": "iot0", "type": "access", "vlans": [50]},
+    {"a": "apF0", "b": "staff0", "type": "wifi", "vlans": [30]},
+    {"a": "apP0", "b": "visit", "type": "wifi", "vlans": [40]},
+    {"a": "swDC", "b": "srv", "type": "access", "vlans": [60]},
+    {"a": "swA1", "b": "pcs1", "type": "access", "vlans": [10, 20]},
+    {"a": "swA1", "b": "ap1", "type": "access", "vlans": [30]},
+    {"a": "swA1", "b": "iot1", "type": "access", "vlans": [50]},
+    {"a": "swA2", "b": "pcs2", "type": "access", "vlans": [10, 20]},
+    {"a": "swA2", "b": "ap2", "type": "access", "vlans": [30]},
+    {"a": "swA2", "b": "iot2", "type": "access", "vlans": [50]}
+  ],
+  "flows": [
+    {"id": "pc2-dc", "label": "PC do 2º andar → servidor", "path": ["pcs2", "swA2", "core", "swDC", "srv"], "ok": true,
+     "text": "Permitido. A VLAN 10 pode acessar o datacenter: o core roteia da VLAN 10 para a 60 e a resposta volta pelo mesmo caminho."},
+    {"id": "iot-ctrl", "label": "IoT → controlador", "path": ["iot1", "swA1", "core", "swDC", "srv"], "ok": true,
+     "text": "Permitido. A VLAN 50 só pode falar com o controlador IoT, que fica no datacenter."},
+    {"id": "iot-pc", "label": "IoT → PC de dados", "path": ["iot1", "swA1", "core"], "ok": false,
+     "text": "Bloqueado no core. A ACL na entrada da SVI da VLAN 50 só permite o controlador, então o tráfego para a VLAN 10 é descartado."},
+    {"id": "pub-dc", "label": "Visitante → datacenter", "path": ["visit", "apP0", "swT", "core"], "ok": false,
+     "text": "Bloqueado no core. A ACL na entrada da SVI da VLAN 40 só permite saída para a internet, então o pacote nunca chega ao datacenter."},
+    {"id": "pub-net", "label": "Visitante → internet", "path": ["visit", "apP0", "swT", "core", "router", "internet"], "ok": true,
+     "text": "Permitido. O core encaminha ao roteador, que faz PAT e troca o endereço 10.10.8.x pelo endereço público."}
+  ]
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('rede-data').textContent);
+  var stage = document.getElementById('stage');
+  var reduce = window.matchMedia('(prefers-color-scheme: dark)') && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var byId = {};
+  DATA.devices.forEach(function (d) { byId[d.id] = d; });
+  var floorName = {};
+  DATA.floors.forEach(function (f) { floorName[f.id] = f.name; });
+  var vlanName = {};
+  DATA.vlans.forEach(function (v) { vlanName[v.id] = v.name; });
+
+  function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function clamp(x, a, b) { return Math.min(b, Math.max(a, x)); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  var selected = null, hover = null, vlanFilter = null, flow = null, gap = 3.6, labelsOn = true;
+  var devs = [], links = [], slabs = [], floorLabels = [];
+
+  /* ---------- painel (funciona mesmo sem WebGL) ---------- */
+  var infoEl = document.getElementById('info');
+  var flowBox = document.getElementById('flowBox');
+  var devSelect = document.getElementById('devSelect');
+
+  DATA.devices.forEach(function (d) {
+    var o = el('option', '', d.title + ' · ' + (d.floorLabel || floorName[d.floor]));
+    o.value = d.id;
+    devSelect.appendChild(o);
+  });
+  devSelect.addEventListener('change', function () { select(devSelect.value); });
+
+  function renderInfo() {
+    infoEl.textContent = '';
+    if (!selected) {
+      infoEl.appendChild(el('p', 'sub', 'Clique em um equipamento no modelo ou escolha na lista.'));
+      return;
+    }
+    var d = byId[selected];
+    var box = el('div', '');
+    box.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+    var h = el('h2', '', d.title);
+    h.appendChild(el('span', 'tag', d.floorLabel || floorName[d.floor]));
+    box.appendChild(h);
+    box.appendChild(el('p', '', d.role));
+    var dl = el('dl', '');
+    d.props.forEach(function (p) { dl.appendChild(el('dt', '', p[0])); dl.appendChild(el('dd', '', p[1])); });
+    box.appendChild(dl);
+    var vh = el('div', '');
+    vh.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    vh.appendChild(el('h3', '', 'VLANs neste equipamento'));
+    var pills = el('div', 'pills');
+    if (d.vlans.length === 0) pills.appendChild(el('span', 'pill', 'Sem VLAN própria'));
+    d.vlans.forEach(function (v) { pills.appendChild(el('span', 'pill', v + ' · ' + vlanName[v])); });
+    vh.appendChild(pills);
+    box.appendChild(vh);
+    infoEl.appendChild(box);
+  }
+
+  function renderFlow() {
+    flowBox.textContent = '';
+    if (!flow) { flowBox.hidden = true; return; }
+    flowBox.hidden = false;
+    var def = flow.def;
+    var done = flow.state !== 'run';
+    flowBox.className = 'flowbox' + (done ? (def.ok ? ' ok' : ' bad') : '');
+    flowBox.appendChild(el('h3', '', 'Fluxo de teste'));
+    flowBox.appendChild(el('p', 'q', def.label));
+    flowBox.appendChild(el('p', 'state', done ? (def.ok ? 'Permitido' : 'Bloqueado') : 'Em andamento…'));
+    flowBox.appendChild(el('p', 'path', def.path.map(function (id) { return byId[id].name; }).join(' → ')));
+    if (done) flowBox.appendChild(el('p', '', def.text));
+  }
+
+  function select(id) {
+    selected = id;
+    if (id) devSelect.value = id;
+    renderInfo();
+    refresh();
+  }
+
+  /* ---------- barras de filtro e de fluxos ---------- */
+  var vlanBar = document.getElementById('vlanBar');
+  var chips = [];
+  function addChip(label, v) {
+    var b = el('button', 'chip', label);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function () {
+      vlanFilter = (vlanFilter === v) ? null : v;
+      chips.forEach(function (c) { c.b.setAttribute('aria-pressed', String(c.v === vlanFilter)); });
+      refresh();
+    });
+    chips.push({ b: b, v: v });
+    vlanBar.appendChild(b);
+  }
+  addChip('Todas', null);
+  DATA.vlans.forEach(function (v) { addChip(v.id + ' · ' + v.name, v.id); });
+  chips[0].b.setAttribute('aria-pressed', 'true');
+
+  var flowBar = document.getElementById('flowBar');
+  DATA.flows.forEach(function (f) {
+    var b = el('button', 'btn', f.label);
+    b.type = 'button';
+    b.addEventListener('click', function () { startFlow(f); });
+    flowBar.appendChild(b);
+  });
+
+  /* ---------- cena 3D ---------- */
+  var canvas, renderer, scene, camera;
+  var ok3d = typeof THREE !== 'undefined';
+  if (ok3d) {
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e) { ok3d = false; }
+  }
+  if (!ok3d) {
+    var m = el('div', 'msg', 'Não foi possível iniciar o modelo 3D neste navegador. O painel ao lado continua funcionando.');
+    stage.appendChild(m);
+    select('core');
+    return;
+  }
+
+  canvas = renderer.domElement;
+  stage.insertBefore(canvas, stage.firstChild);
+  canvas.style.touchAction = 'none';
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.65);
+  sun.position.set(8, 16, 10);
+  scene.add(sun);
+
+  var COLOR = { gear: 0x6C63D6, inner: 0x1FA37A, iso: 0xE0663A, ext: 0x8B95A3 };
+  var GEO = {
+    cloud: function () { return new THREE.SphereGeometry(0.9, 24, 16); },
+    router: function () { return new THREE.CylinderGeometry(0.75, 0.75, 0.5, 28); },
+    core: function () { return new THREE.BoxGeometry(2.6, 0.6, 1.5); },
+    switch: function () { return new THREE.BoxGeometry(1.8, 0.35, 0.9); },
+    ap: function () { return new THREE.CylinderGeometry(0.5, 0.5, 0.2, 28); },
+    pcs: function () { return new THREE.BoxGeometry(1.6, 0.5, 1.0); },
+    server: function () { return new THREE.BoxGeometry(1.0, 1.2, 0.9); },
+    iot: function () { return new THREE.BoxGeometry(0.9, 0.5, 0.9); },
+    people: function () { return new THREE.BoxGeometry(1.3, 0.5, 1.0); }
+  };
+
+  var labelsEl = document.getElementById('labels');
+  var meshes = [];
+  DATA.devices.forEach(function (d) {
+    var geo = GEO[d.kind]();
+    geo.computeBoundingBox();
+    var h = geo.boundingBox.max.y - geo.boundingBox.min.y;
+    var color = COLOR[d.cls];
+    var mat = new THREE.MeshLambertMaterial({ color: color });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.userData.id = d.id;
+    var edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.55 }));
+    mesh.add(edge);
+    scene.add(mesh);
+    var lbl = el('div', 'lbl', d.name);
+    labelsEl.appendChild(lbl);
+    var o = { d: d, mesh: mesh, mat: mat, edge: edge, h: h, color: color, lbl: lbl, dim: false };
+    devs.push(o);
+    meshes.push(mesh);
+  });
+  var devById = {};
+  devs.forEach(function (o) { devById[o.d.id] = o; });
+
+  var upVec = new THREE.Vector3(0, 1, 0);
+  DATA.links.forEach(function (ld) {
+    var L = { d: ld, a: devById[ld.a], b: devById[ld.b] };
+    if (ld.type === 'wifi') {
+      L.mat = new THREE.LineDashedMaterial({ color: 0x888888, dashSize: 0.25, gapSize: 0.18, transparent: true });
+      L.line = new THREE.Line(new THREE.BufferGeometry(), L.mat);
+      scene.add(L.line);
+    } else {
+      var r = ld.type === 'trunk' ? 0.07 : 0.04;
+      var g = new THREE.CylinderGeometry(r, r, 1, 8);
+      L.mat = new THREE.MeshBasicMaterial({ color: ld.type === 'trunk' ? 0x6C63D6 : 0x888888, transparent: true });
+      L.mesh = new THREE.Mesh(g, L.mat);
+      scene.add(L.mesh);
+    }
+    links.push(L);
+  });
+
+  var slabGeo = new THREE.BoxGeometry(16, 0.2, 10);
+  var slabMat = new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.55, depthWrite: false });
+  var slabEdgeMat = new THREE.LineBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.8 });
+  DATA.floors.forEach(function (f) {
+    var s = new THREE.Mesh(slabGeo, slabMat);
+    s.add(new THREE.LineSegments(new THREE.EdgesGeometry(slabGeo), slabEdgeMat));
+    scene.add(s);
+    slabs.push(s);
+    var l = el('div', 'lbl floor', f.name);
+    labelsEl.appendChild(l);
+    floorLabels.push(l);
+  });
+
+  /* ---------- casca do prédio: paredes com janelas, cornija, porta e terreno ---------- */
+  var shell = new THREE.Group();
+  scene.add(shell);
+  var walls = [], cols = [];
+  var wallMat = new THREE.MeshLambertMaterial({ color: 0xE6D9BF });
+  var trimMat = new THREE.MeshLambertMaterial({ color: 0xF6F0E2 });
+  var groundMat = new THREE.MeshLambertMaterial({ color: 0xDCE1E7 });
+  var doorMat = new THREE.MeshLambertMaterial({ color: 0x5A3E2B });
+  var glassMat = new THREE.MeshLambertMaterial({ color: 0x9CC3E0, transparent: true, opacity: 0.6 });
+  function addBox(parent, w, h, d, mat, x, y, z) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    parent.add(m);
+    return m;
+  }
+  function buildShell() {
+    while (shell.children.length) {
+      var c = shell.children[0];
+      shell.remove(c);
+      c.traverse(function (m) { if (m.geometry) m.geometry.dispose(); });
+    }
+    walls = []; cols = [];
+    var W = 16, D = 10, y0 = -0.2, H = 3 * gap + 0.6;
+    addBox(shell, 34, 0.1, 22, groundMat, 2, -0.3, 0);
+    var sides = [
+      { n: [0, -1], len: W, door: true },
+      { n: [0, 1], len: W },
+      { n: [-1, 0], len: D },
+      { n: [1, 0], len: D }
+    ];
+    sides.forEach(function (sd) {
+      var g = new THREE.Group();
+      addBox(g, sd.len, H, 0.16, wallMat, 0, y0 + H / 2, 0);
+      addBox(g, sd.len + 0.6, 0.32, 0.56, trimMat, 0, y0 + H, 0);
+      addBox(g, sd.len + 0.1, 0.14, 0.3, trimMat, 0, gap - 0.1, 0);
+      addBox(g, sd.len + 0.1, 0.14, 0.3, trimMat, 0, 2 * gap - 0.1, 0);
+      addBox(g, sd.len + 0.1, 0.3, 0.3, trimMat, 0, y0 + 0.15, 0);
+      var n = Math.floor(sd.len / 2.6), sp = sd.len / n;
+      var wh = Math.min(1.7, gap * 0.5);
+      for (var f = 0; f < 3; f++) {
+        for (var i = 0; i < n; i++) {
+          var x = -sd.len / 2 + sp * (i + 0.5);
+          if (sd.door && f === 0 && i === Math.floor(n / 2)) {
+            addBox(g, 1.9, 2.5, 0.26, trimMat, x, 1.05, 0);
+            addBox(g, 1.5, 2.3, 0.32, doorMat, x, 0.95, 0);
+          } else {
+            var cy = f * gap + gap * 0.52;
+            addBox(g, 1.25, wh + 0.25, 0.24, trimMat, x, cy, 0);
+            addBox(g, 1.0, wh, 0.3, glassMat, x, cy, 0);
+            addBox(g, 1.5, 0.1, 0.4, trimMat, x, cy - wh / 2 - 0.15, 0);
+          }
+        }
+      }
+      g.position.set(sd.n[0] * W / 2, 0, sd.n[1] * D / 2);
+      g.rotation.y = Math.atan2(sd.n[0], sd.n[1]);
+      shell.add(g);
+      walls.push({ g: g, n: sd.n });
+    });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c2) {
+      cols.push({ m: addBox(shell, 0.5, H + 0.16, 0.5, trimMat, c2[0] * W / 2, y0 + H / 2, c2[1] * D / 2), c: c2 });
+    });
+  }
+  function isDark() {
+    var t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  var packet = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), new THREE.MeshBasicMaterial({ color: 0x3B82F6 }));
+  packet.visible = false;
+  scene.add(packet);
+  var ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.08, 12, 36), new THREE.MeshBasicMaterial({ color: 0xE5484D }));
+  ring.visible = false;
+  scene.add(ring);
+
+  function applyTheme() {
+    slabMat.color.set(css('--slab'));
+    slabEdgeMat.color.set(css('--edge'));
+    var dk = isDark();
+    wallMat.color.setHex(dk ? 0x6A6052 : 0xDCC9A3);
+    trimMat.color.setHex(dk ? 0x8C8271 : 0xEFE3C8);
+    groundMat.color.setHex(dk ? 0x222B38 : 0xC5CEC0);
+    glassMat.color.setHex(dk ? 0x5E86A6 : 0x9CC3E0);
+    var edgeC = css('--edge'), linkC = css('--link');
+    devs.forEach(function (o) { o.edge.material.color.set(edgeC); });
+    links.forEach(function (L) { if (L.d.type !== 'trunk') L.mat.color.set(linkC); });
+  }
+
+  function place() {
+    devs.forEach(function (o) {
+      o.mesh.position.set(o.d.pos[0], o.d.floor * gap + o.h / 2 + 0.1, o.d.pos[1]);
+    });
+    slabs.forEach(function (s, i) { s.position.set(0, i * gap - 0.1, 0); });
+    buildShell();
+    var dir = new THREE.Vector3();
+    links.forEach(function (L) {
+      var a = L.a.mesh.position, b = L.b.mesh.position;
+      if (L.line) {
+        L.line.geometry.setFromPoints([a, b]);
+        L.line.computeLineDistances();
+      } else {
+        dir.subVectors(b, a);
+        var len = dir.length();
+        L.mesh.position.copy(a).addScaledVector(dir, 0.5);
+        L.mesh.scale.set(1, len, 1);
+        L.mesh.quaternion.setFromUnitVectors(upVec, dir.normalize());
+      }
+    });
+    target.y = gap;
+    updateCamera();
+  }
+
+  /* ---------- câmera ---------- */
+  var theta = 0.85, phi = 1.12, radius = 32, target = new THREE.Vector3(0, gap, 0);
+  function updateCamera() {
+    camera.position.set(
+      target.x + radius * Math.sin(phi) * Math.sin(theta),
+      target.y + radius * Math.cos(phi),
+      target.z + radius * Math.sin(phi) * Math.cos(theta)
+    );
+    camera.lookAt(target);
+  }
+  function fitRadius() {
+    var aspect = camera.aspect || 1.5;
+    return clamp(30 * Math.max(1, 1.6 / aspect), 26, 62);
+  }
+  function resetView() { theta = 0.85; phi = 1.12; radius = fitRadius(); updateCamera(); }
+
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    var first = !resize.done;
+    renderer.setSize(w, h, false);
+    canvas.style.width = '100%'; canvas.style.height = '100%';
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    if (first) { resize.done = true; radius = fitRadius(); }
+    updateCamera();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  window.addEventListener('resize', resize);
+
+  /* ---------- interação ---------- */
+  var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function pick(ev) {
+    var r = canvas.getBoundingClientRect();
+    ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    var hit = ray.intersectObjects(meshes, false)[0];
+    return hit ? hit.object.userData.id : null;
+  }
+  var drag = null;
+  canvas.addEventListener('pointerdown', function (e) {
+    canvas.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false };
+    canvas.style.cursor = 'grabbing';
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (drag) {
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.x = e.clientX; drag.y = e.clientY;
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4) drag.moved = true;
+      if (drag.moved) {
+        theta -= dx * 0.008;
+        phi = clamp(phi - dy * 0.008, 0.2, 1.55);
+        updateCamera();
+      }
+    } else {
+      var id = pick(e);
+      if (id !== hover) { hover = id; canvas.style.cursor = id ? 'pointer' : 'grab'; refresh(); }
+    }
+  });
+  canvas.addEventListener('pointerup', function (e) {
+    if (drag && !drag.moved) select(pick(e));
+    drag = null;
+    canvas.style.cursor = hover ? 'pointer' : 'grab';
+  });
+  canvas.addEventListener('pointercancel', function () { drag = null; });
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    radius = clamp(radius * (1 + e.deltaY * 0.001), 14, 70);
+    updateCamera();
+  }, { passive: false });
+  document.getElementById('btnReset').addEventListener('click', resetView);
+  document.getElementById('btnIn').addEventListener('click', function () { radius = clamp(radius * 0.85, 14, 70); updateCamera(); });
+  document.getElementById('btnOut').addEventListener('click', function () { radius = clamp(radius / 0.85, 14, 70); updateCamera(); });
+  document.getElementById('chkLabels').addEventListener('change', function (e) { labelsOn = e.target.checked; });
+  document.getElementById('gap').addEventListener('input', function (e) {
+    gap = parseFloat(e.target.value);
+    flow = null; packet.visible = false; ring.visible = false;
+    renderFlow(); place(); refresh();
+  });
+
+  /* ---------- realce, filtro e fluxos ---------- */
+  function refresh() {
+    var pathSet = null;
+    if (flow) { pathSet = {}; flow.def.path.forEach(function (id) { pathSet[id] = true; }); }
+    devs.forEach(function (o) {
+      var on = !vlanFilter || o.d.vlans.indexOf(vlanFilter) >= 0;
+      o.dim = !on;
+      o.mat.transparent = !on;
+      o.mat.opacity = on ? 1 : 0.14;
+      o.edge.material.opacity = on ? 0.55 : 0.1;
+      var lvl = selected === o.d.id ? 0.5 : (pathSet && pathSet[o.d.id] ? 0.45 : (hover === o.d.id ? 0.3 : 0));
+      o.mat.emissive.setHex(o.color).multiplyScalar(lvl);
+    });
+    links.forEach(function (L) {
+      var on = !vlanFilter || L.d.vlans.indexOf(vlanFilter) >= 0;
+      L.mat.transparent = !on;
+      L.mat.opacity = on ? 1 : 0.1;
+    });
+  }
+
+  function startFlow(def) {
+    var pts = def.path.map(function (id) {
+      var o = devById[id];
+      return new THREE.Vector3(o.mesh.position.x, o.mesh.position.y + o.h / 2 + 0.5, o.mesh.position.z);
+    });
+    var cum = [0];
+    for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    flow = { def: def, pts: pts, cum: cum, total: cum[cum.length - 1], t: 0, state: 'run', endAt: 0 };
+    packet.material.color.setHex(0x3B82F6);
+    packet.visible = true;
+    ring.visible = false;
+    if (reduce) { flow.t = flow.total; }
+    renderFlow();
+    refresh();
+  }
+
+  function stepFlow(dt) {
+    if (!flow || flow.state !== 'run') return;
+    flow.t = Math.min(flow.total, flow.t + dt * 7);
+    var seg = 1;
+    while (seg < flow.cum.length - 1 && flow.cum[seg] < flow.t) seg++;
+    var span = flow.cum[seg] - flow.cum[seg - 1] || 1;
+    var k = clamp((flow.t - flow.cum[seg - 1]) / span, 0, 1);
+    packet.position.lerpVectors(flow.pts[seg - 1], flow.pts[seg], k);
+    if (flow.t >= flow.total) {
+      flow.state = flow.def.ok ? 'ok' : 'blocked';
+      flow.endAt = performance.now();
+      packet.position.copy(flow.pts[flow.pts.length - 1]);
+      packet.material.color.setHex(flow.def.ok ? 0x2FBF71 : 0xE5484D);
+      if (!flow.def.ok) { ring.position.copy(packet.position); ring.visible = true; }
+      renderFlow();
+    }
+  }
+
+  /* ---------- rótulos ---------- */
+  var v3 = new THREE.Vector3();
+  function updateLabels() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    devs.forEach(function (o) {
+      v3.copy(o.mesh.position); v3.y += o.h / 2 + 0.35; v3.project(camera);
+      var vis = labelsOn && v3.z < 1;
+      o.lbl.style.display = vis ? 'block' : 'none';
+      if (vis) {
+        o.lbl.style.transform = 'translate(' + ((v3.x * 0.5 + 0.5) * w) + 'px,' + ((-v3.y * 0.5 + 0.5) * h) + 'px) translate(-50%,-100%)';
+        o.lbl.style.opacity = o.dim ? 0.25 : 1;
+      }
+    });
+    floorLabels.forEach(function (l, i) {
+      v3.set(-7.6, i * gap, 4.7); v3.project(camera);
+      var vis = v3.z < 1;
+      l.style.display = vis ? 'block' : 'none';
+      if (vis) l.style.transform = 'translate(' + ((v3.x * 0.5 + 0.5) * w) + 'px,' + ((-v3.y * 0.5 + 0.5) * h) + 'px)';
+    });
+  }
+
+  /* ---------- laço de desenho ---------- */
+  var last = performance.now();
+  function frame(now) {
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    stepFlow(dt);
+    if (ring.visible) {
+      ring.lookAt(camera.position);
+      var s = 1 + 0.12 * Math.sin(now / 160);
+      ring.scale.set(s, s, s);
+    }
+    var cx = Math.sin(theta), cz = Math.cos(theta);
+    walls.forEach(function (w) { w.g.visible = (w.n[0] * cx + w.n[1] * cz) < 0.2; });
+    cols.forEach(function (k) { k.m.visible = (k.c[0] * cx) < 0.2 && (k.c[1] * cz) < 0.2; });
+    updateLabels();
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+
+  applyTheme();
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  }
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  place();
+  resize();
+  select('core');
+  requestAnimationFrame(frame);
+})();
+</script>

@@ -1,6 +1,9 @@
-# Packet Tracer
-*.pkz
-*.pkt.bak
-*~
+node_modules/
 .DS_Store
 Thumbs.db
+*.tmp
+*.bak
+*.pkt.bak
+~$*
+.vscode/
+.idea/

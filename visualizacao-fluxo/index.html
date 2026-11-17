@@ -1,0 +1,1116 @@
+<title>Viagem do pacote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Visual único e escuro: mapa em colunas (dispositivos → acesso → core → datacenter/borda → destinos),
+   partículas correndo nos enlaces e um balão explicativo que acompanha o pacote. */
+:root{
+  color-scheme:dark;
+  --bg:#0A1017; --surface:#101822; --card:#16212D; --line:#243242; --fg:#E3EAF2; --muted:#8495A8;
+  --ida:#6FD3E8; --volta:#F0954A; --ok:#5FD19B; --bad:#FF7A7F;
+  --on-accent:#08222A; --mark:rgba(240,149,74,.2);
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --head:"Space Grotesk","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font:14px/1.5 var(--font);
+  padding-block:20px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1172px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px}
+h1{font:600 24px/1.2 var(--head);margin:0;letter-spacing:-.01em}
+.sub{font:12px var(--mono);color:var(--muted);margin:4px 0 0}
+.legend{display:flex;gap:16px;font:12px var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:26px;height:0;border-top:2px solid var(--ida);vertical-align:middle;margin-right:6px}
+.legend i.v{border-top:2px dashed var(--volta)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.lab{font:12px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
+.chip,.btn{
+  font:13px/1 var(--font);padding:9px 12px;border:1px solid var(--line);
+  background:var(--surface);color:var(--fg);border-radius:6px;cursor:pointer;
+}
+.chip:hover,.btn:hover{border-color:var(--ida)}
+.chip[aria-pressed="true"],.btn.primary{background:var(--ida);border-color:var(--ida);color:var(--on-accent);font-weight:600}
+.btn:disabled{opacity:.4;cursor:default}
+.chip:focus-visible,.btn:focus-visible{outline:2px solid var(--ida);outline-offset:2px}
+.count{font:12px var(--mono);color:var(--muted);margin-left:auto}
+
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.canvas{
+  position:relative;width:1170px;height:700px;
+  background-image:radial-gradient(circle,rgba(255,255,255,.055) 1px,transparent 1.2px);
+  background-size:22px 22px;
+}
+.canvas svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.colh{position:absolute;top:16px;font:11px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:6px;width:140px}
+.lk{fill:none;stroke:var(--line);stroke-width:1.5}
+.lk.wifi{stroke-dasharray:3 5}
+.lk.on{stroke:var(--ida);stroke-opacity:.75;stroke-width:2}
+.pt{fill:var(--ida);opacity:.3}
+.pt.v{fill:var(--volta)}
+.pt.on{opacity:.95}
+.pkt{fill:#fff;stroke:var(--ida);stroke-width:4;filter:drop-shadow(0 0 8px var(--ida))}
+.pkt.ok{stroke:var(--ok);filter:drop-shadow(0 0 8px var(--ok))}
+.pkt.bad{stroke:var(--bad);filter:drop-shadow(0 0 10px var(--bad))}
+.rpk{fill:var(--volta);filter:drop-shadow(0 0 7px var(--volta))}
+.node{
+  position:absolute;width:140px;background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:9px 10px;display:flex;flex-direction:column;gap:2px;justify-content:center;
+  transition:border-color .25s,box-shadow .25s,opacity .25s;opacity:.72;
+}
+.node .nm{font:600 13px/1.25 var(--head);display:flex;align-items:center;gap:6px}
+.node .nm::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none;transition:background .25s}
+.node .sb{font:10.5px/1.35 var(--mono);color:var(--muted)}
+.node.seen{opacity:1}
+.node.seen .nm::before{background:var(--ok)}
+.node.cur{opacity:1;border-color:var(--ida);box-shadow:0 0 0 3px rgba(111,211,232,.16)}
+.node.cur .nm::before{background:var(--ida)}
+.node.core{border-color:rgba(240,149,74,.55);background:#1D1F22;justify-content:flex-start;gap:6px;padding-top:12px}
+.node.core.cur{border-color:var(--volta);box-shadow:0 0 0 3px rgba(240,149,74,.18)}
+.node.core.cur .nm::before{background:var(--volta)}
+.node.core .row{display:flex;justify-content:space-between;gap:6px;font:10.5px/1.3 var(--mono);color:var(--muted);border-top:1px solid var(--line);padding-top:5px;white-space:nowrap}
+.node.core .row b{color:var(--fg);font-weight:500;text-align:right}
+.node.blocked{border-color:var(--bad);box-shadow:0 0 0 3px rgba(255,122,127,.18)}
+
+.balloon{
+  position:absolute;width:320px;background:#0E1620;border:1px solid var(--ida);border-radius:10px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:8px;z-index:5;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);transition:opacity .2s;
+}
+.balloon.above{transform:translateY(-100%)}
+.balloon.hide{opacity:0;pointer-events:none}
+.balloon.ok{border-color:var(--ok)}
+.balloon.bad{border-color:var(--bad)}
+.balloon .arrow{position:absolute;width:12px;height:12px;background:#0E1620;border:1px solid;border-color:inherit;transform:rotate(45deg);margin-left:-6px}
+.balloon.below .arrow{top:-7px;border-right:none;border-bottom:none}
+.balloon.above .arrow{bottom:-7px;border-left:none;border-top:none}
+.balloon .meta{display:flex;justify-content:space-between;gap:8px;font:11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.balloon h2{font:600 15px/1.3 var(--head);margin:0;text-wrap:balance}
+.balloon p{margin:0;font-size:13px}
+.balloon .ans{font-weight:600;color:var(--ida)}
+.balloon .ans span{font-weight:400;color:var(--muted)}
+.balloon .res{font-weight:600}
+.balloon.ok .res{color:var(--ok)}
+.balloon.bad .res{color:var(--bad)}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{font:600 13px/1.2 var(--font);text-align:left;padding:9px 11px;border:1px solid var(--ida);background:transparent;color:var(--ida);border-radius:6px;cursor:pointer}
+.opt:hover{background:rgba(111,211,232,.12)}
+.opt[aria-pressed="true"]{background:var(--ida);color:var(--on-accent)}
+.opt:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.balloon .hintc{font-size:12px;color:var(--muted)}
+.chg{display:flex;flex-direction:column;gap:3px}
+.chg div{font:11.5px/1.4 var(--mono);background:var(--mark);border-radius:4px;padding:2px 7px;overflow-wrap:anywhere}
+.chg div span{color:var(--muted)}
+.cmd{font:11.5px var(--mono);color:var(--ida);border:1px solid var(--line);border-radius:4px;padding:4px 7px;overflow-wrap:anywhere}
+.cmd::before{content:"# ";color:var(--muted)}
+
+.frame{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.frame > div{background:var(--surface);padding:8px 10px;min-width:0;transition:background .3s}
+.frame .k{font:10.5px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block}
+.frame .v{font:12.5px/1.35 var(--mono);overflow-wrap:anywhere;display:block;margin-top:2px}
+.frame .c{background:#2A2119}
+.frame .c .v{color:var(--volta)}
+.note{font-size:12px;color:var(--muted);max-width:95ch;margin:0}
+.note code{font-family:var(--mono)}
+@media (max-width:760px){.frame{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Viagem do pacote</h1>
+      <p class="sub">Dispositivos → acesso → core L3 → datacenter e borda → destinos</p>
+    </div>
+    <div class="legend" aria-hidden="true"><span><i></i>ida</span><span><i class="v"></i>volta</span></div>
+  </div>
+
+  <div class="bar" role="group" aria-label="Cenário" id="scBar"><span class="lab">Cenário</span></div>
+
+  <div class="scroller" id="scroller">
+    <div class="canvas" id="canvas">
+      <svg id="svg" aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="btn" id="bPrev" type="button">◀ Voltar</button>
+    <button class="btn primary" id="bPlay" type="button">Reproduzir</button>
+    <button class="btn" id="bNext" type="button">Avançar ▶</button>
+    <button class="btn" id="bReset" type="button">Reiniciar</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="frame" id="frame" aria-label="Quadro neste ponto"></div>
+
+  <p class="note">A faixa acima mostra o quadro no ponto atual; os campos em laranja mudaram no último passo. Os endereços de host (10.10.0.50, 10.10.8.20) e os públicos (198.51.100.2, 203.0.113.10) são exemplos. Sub-redes, gateways, servidores e VLANs seguem <code>docs/plano-enderecamento.md</code>; as ACLs seguem o rascunho de <code>docs/politica-de-acesso.md</code>.</p>
+</div>
+
+<script id="fluxo-data" type="application/json">
+{
+ "cols": [
+  [
+   10,
+   "Dispositivos"
+  ],
+  [
+   210,
+   "Wi-Fi"
+  ],
+  [
+   410,
+   "Acesso"
+  ],
+  [
+   610,
+   "Core L3"
+  ],
+  [
+   810,
+   "Datacenter e borda"
+  ],
+  [
+   1010,
+   "Destinos"
+  ]
+ ],
+ "nodes": [
+  {
+   "id": "pc",
+   "x": 10,
+   "y": 96,
+   "h": 60,
+   "name": "PC · 2º andar",
+   "sub": [
+    "10.10.0.50",
+    "VLAN 10 · Dados"
+   ],
+   "ball": "below"
+  },
+  {
+   "id": "vis",
+   "x": 10,
+   "y": 470,
+   "h": 60,
+   "name": "Celular visitante",
+   "sub": [
+    "10.10.8.20",
+    "VLAN 40 · Público"
+   ],
+   "ball": "above"
+  },
+  {
+   "id": "apP",
+   "x": 210,
+   "y": 470,
+   "h": 60,
+   "name": "AP público",
+   "sub": [
+    "SSID de visitantes",
+    "SW-T Fa0/2"
+   ],
+   "ball": "above"
+  },
+  {
+   "id": "swA2",
+   "x": 410,
+   "y": 96,
+   "h": 60,
+   "name": "SW-A2",
+   "sub": [
+    "acesso do 2º andar",
+    "trunk 10,20,30,50,99"
+   ],
+   "ball": "below"
+  },
+  {
+   "id": "swT",
+   "x": 410,
+   "y": 470,
+   "h": 60,
+   "name": "SW-T",
+   "sub": [
+    "acesso do térreo",
+    "trunk 30,40,50,99"
+   ],
+   "ball": "above"
+  },
+  {
+   "id": "core",
+   "x": 610,
+   "y": 160,
+   "h": 222,
+   "name": "Core L3",
+   "core": true,
+   "ball": "below",
+   "rows": [
+    [
+     "SVIs",
+     "uma por VLAN"
+    ],
+    [
+     "GW 10",
+     "10.10.0.1"
+    ],
+    [
+     "GW 40",
+     "10.10.8.1"
+    ],
+    [
+     "GW 60",
+     "10.10.10.65"
+    ],
+    [
+     "ACLs",
+     "nas SVIs"
+    ],
+    [
+     "DHCP",
+     "relay"
+    ],
+    [
+     "Padrão",
+     "10.10.255.1"
+    ]
+   ]
+  },
+  {
+   "id": "swDC",
+   "x": 810,
+   "y": 96,
+   "h": 60,
+   "name": "SW-DC",
+   "sub": [
+    "datacenter",
+    "trunk 60,99"
+   ],
+   "ball": "below"
+  },
+  {
+   "id": "router",
+   "x": 810,
+   "y": 470,
+   "h": 60,
+   "name": "Roteador de borda",
+   "sub": [
+    "10.10.255.1",
+    "NAT/PAT"
+   ],
+   "ball": "above"
+  },
+  {
+   "id": "dhcp",
+   "x": 1010,
+   "y": 40,
+   "h": 60,
+   "name": "Servidor DHCP",
+   "sub": [
+    "10.10.10.66",
+    "VLAN 60"
+   ],
+   "ball": "below"
+  },
+  {
+   "id": "dns",
+   "x": 1010,
+   "y": 152,
+   "h": 60,
+   "name": "Servidor DNS",
+   "sub": [
+    "10.10.10.67",
+    "VLAN 60"
+   ],
+   "ball": "below"
+  },
+  {
+   "id": "internet",
+   "x": 1010,
+   "y": 470,
+   "h": 60,
+   "name": "Internet",
+   "sub": [
+    "203.0.113.10",
+    "destino externo"
+   ],
+   "ball": "above"
+  }
+ ],
+ "links": [
+  {
+   "a": "pc",
+   "b": "swA2"
+  },
+  {
+   "a": "vis",
+   "b": "apP",
+   "wifi": true
+  },
+  {
+   "a": "apP",
+   "b": "swT"
+  },
+  {
+   "a": "swA2",
+   "b": "core",
+   "yb": 215
+  },
+  {
+   "a": "swT",
+   "b": "core",
+   "yb": 325
+  },
+  {
+   "a": "core",
+   "b": "swDC",
+   "ya": 215
+  },
+  {
+   "a": "core",
+   "b": "router",
+   "ya": 325
+  },
+  {
+   "a": "swDC",
+   "b": "dhcp"
+  },
+  {
+   "a": "swDC",
+   "b": "dns"
+  },
+  {
+   "a": "router",
+   "b": "internet"
+  }
+ ],
+ "fields": [
+  [
+   "macD",
+   "MAC destino"
+  ],
+  [
+   "macS",
+   "MAC origem"
+  ],
+  [
+   "tag",
+   "Tag 802.1Q"
+  ],
+  [
+   "ipS",
+   "IP origem"
+  ],
+  [
+   "ipD",
+   "IP destino"
+  ],
+  [
+   "extra",
+   "Conteúdo"
+  ]
+ ],
+ "scenarios": [
+  {
+   "id": "pc-dc",
+   "label": "PC → servidor",
+   "ret": true,
+   "steps": [
+    {
+     "at": "pc",
+     "type": "dec",
+     "layer": "Camada 3",
+     "title": "O destino está na minha sub-rede?",
+     "text": "O PC quer consultar o DNS (10.10.10.67). Ele compara o destino com a própria rede, 10.10.0.0/23. Não pertence, então o pacote vai para o gateway 10.10.0.1.",
+     "answer": "Não",
+     "other": "Sim: falaria direto, sem passar pelo core",
+     "frame": {
+      "macD": "—",
+      "macS": "—",
+      "tag": "—",
+      "ipS": "10.10.0.50",
+      "ipD": "10.10.10.67",
+      "extra": "Consulta DNS (UDP 53)"
+     }
+    },
+    {
+     "at": "pc",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "ARP: qual é o MAC do gateway?",
+     "text": "Para montar o quadro, o PC precisa do MAC de 10.10.0.1. Ele envia um ARP em broadcast; só a VLAN 10 recebe, e o core responde com o MAC da SVI 10.",
+     "cmd": "arp -a",
+     "frame": {
+      "macD": "FF:FF:FF:FF:FF:FF",
+      "macS": "MAC do PC",
+      "tag": "sem tag",
+      "ipS": "—",
+      "ipD": "—",
+      "extra": "ARP: quem tem 10.10.0.1?"
+     }
+    },
+    {
+     "at": "pc",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "O PC monta o quadro",
+     "text": "O IP de destino é o do servidor, mas o MAC de destino é o do gateway. O MAC vale só até o próximo salto; o IP vale de ponta a ponta.",
+     "frame": {
+      "macD": "MAC da SVI 10",
+      "macS": "MAC do PC",
+      "tag": "sem tag",
+      "ipS": "10.10.0.50",
+      "ipD": "10.10.10.67",
+      "extra": "Consulta DNS (UDP 53)"
+     }
+    },
+    {
+     "at": "swA2",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "Porta de acesso: VLAN 10",
+     "text": "O quadro chega sem tag em uma porta de acesso da VLAN 10. O switch aprende o MAC de origem e encontra o MAC de destino atrás do uplink.",
+     "cmd": "show mac address-table"
+    },
+    {
+     "at": "swA2",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "A tag 802.1Q entra no trunk",
+     "text": "Várias VLANs dividem o mesmo cabo, então o switch insere 4 bytes de tag com o VID 10. O quadro pode chegar a 1522 bytes.",
+     "cmd": "show interfaces trunk",
+     "frame": {
+      "tag": "VLAN 10"
+     }
+    },
+    {
+     "at": "core",
+     "type": "proc",
+     "layer": "Camada 2 → 3",
+     "title": "O core sobe o pacote para o roteamento",
+     "text": "O MAC de destino é o da própria SVI 10. O core retira o cabeçalho de enlace, com a tag, e entrega o pacote IP ao roteamento.",
+     "frame": {
+      "macD": "—",
+      "macS": "—",
+      "tag": "removida"
+     }
+    },
+    {
+     "at": "core",
+     "type": "dec",
+     "layer": "Camada 3",
+     "title": "A ACL da VLAN 10 permite?",
+     "text": "A ACL de entrada da SVI 10 é lida regra por regra. Pela política, a VLAN de Dados pode acessar o datacenter.",
+     "answer": "Sim",
+     "other": "Não: seria descartado aqui",
+     "cmd": "show access-lists"
+    },
+    {
+     "at": "core",
+     "type": "proc",
+     "layer": "Camada 3",
+     "title": "Rota conectada para a VLAN 60",
+     "text": "10.10.10.64/26 está conectada pela SVI 60. O core diminui o TTL e monta um quadro novo, com MACs novos e tag 60. Os IPs não mudam.",
+     "cmd": "show ip route",
+     "frame": {
+      "macD": "MAC do servidor DNS",
+      "macS": "MAC da SVI 60",
+      "tag": "VLAN 60"
+     }
+    },
+    {
+     "at": "swDC",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "A tag sai na porta de acesso",
+     "text": "O SW-DC encontra o MAC do servidor na porta Fa0/2 e entrega o quadro sem tag. O servidor nunca vê a tag.",
+     "frame": {
+      "tag": "sem tag"
+     }
+    },
+    {
+     "at": "dns",
+     "type": "end",
+     "ok": true,
+     "layer": "Entrega",
+     "title": "O servidor recebe a consulta",
+     "text": "A resposta faz o caminho inverso: o gateway do servidor é 10.10.10.65, o core roteia de volta para a VLAN 10 e o SW-A2 entrega ao PC."
+    }
+   ]
+  },
+  {
+   "id": "dhcp",
+   "label": "PC ganha IP (DHCP)",
+   "ret": false,
+   "steps": [
+    {
+     "at": "pc",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "O PC liga sem endereço",
+     "text": "Sem IP, o PC não consegue falar com ninguém em particular. Ele envia um DHCP Discover em broadcast.",
+     "frame": {
+      "macD": "FF:FF:FF:FF:FF:FF",
+      "macS": "MAC do PC",
+      "tag": "sem tag",
+      "ipS": "0.0.0.0",
+      "ipD": "255.255.255.255",
+      "extra": "DHCP Discover (UDP 68 → 67)"
+     }
+    },
+    {
+     "at": "swA2",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "O broadcast se espalha pela VLAN 10",
+     "text": "O switch repassa a todas as portas da VLAN 10 e ao uplink, com tag. As outras VLANs não recebem: cada VLAN é um domínio de broadcast.",
+     "frame": {
+      "tag": "VLAN 10"
+     }
+    },
+    {
+     "at": "core",
+     "type": "dec",
+     "layer": "Camada 3",
+     "title": "O servidor DHCP está nesta VLAN?",
+     "text": "Broadcast não atravessa roteador. O servidor está na VLAN 60, então sem ajuda o pedido morreria aqui.",
+     "answer": "Não",
+     "other": "Sim: responderia direto, sem relay"
+    },
+    {
+     "at": "core",
+     "type": "proc",
+     "layer": "Camada 3",
+     "title": "O relay vira o broadcast em unicast",
+     "text": "A SVI 10 tem um ip helper-address. O core reenvia o pedido para 10.10.10.66 e anota de qual SVI ele veio (giaddr = 10.10.0.1).",
+     "cmd": "ip helper-address 10.10.10.66",
+     "frame": {
+      "macD": "MAC do servidor DHCP",
+      "macS": "MAC da SVI 60",
+      "tag": "VLAN 60",
+      "ipS": "10.10.0.1",
+      "ipD": "10.10.10.66",
+      "extra": "Discover (giaddr 10.10.0.1)"
+     }
+    },
+    {
+     "at": "swDC",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "Entrega ao servidor",
+     "text": "O SW-DC retira a tag e entrega o quadro na porta Fa0/1, onde está o servidor DHCP.",
+     "frame": {
+      "tag": "sem tag"
+     }
+    },
+    {
+     "at": "dhcp",
+     "type": "proc",
+     "layer": "Aplicação",
+     "title": "O servidor escolhe o escopo e oferece",
+     "text": "Pelo giaddr o servidor sabe que o pedido veio da VLAN 10. Ele responde com um Offer: endereço, máscara 255.255.254.0, gateway 10.10.0.1 e DNS 10.10.10.67.",
+     "frame": {
+      "macD": "MAC da SVI 60",
+      "macS": "MAC do servidor DHCP",
+      "ipS": "10.10.10.66",
+      "ipD": "10.10.0.1",
+      "extra": "DHCP Offer: 10.10.0.50"
+     }
+    },
+    {
+     "at": "swA2",
+     "type": "proc",
+     "layer": "Camada 3 → 2",
+     "title": "O relay devolve na VLAN 10",
+     "text": "O core repassa a oferta para a VLAN 10 e o SW-A2 a entrega na porta do PC.",
+     "frame": {
+      "macD": "MAC do PC",
+      "macS": "MAC da SVI 10",
+      "tag": "VLAN 10 no trunk",
+      "ipS": "10.10.0.1",
+      "ipD": "10.10.0.50 ou broadcast"
+     }
+    },
+    {
+     "at": "pc",
+     "type": "proc",
+     "layer": "Aplicação",
+     "title": "Request e Ack fecham o acordo",
+     "text": "O PC aceita com um Request e o servidor confirma com um Ack, pelo mesmo caminho. As quatro mensagens formam o DORA: Discover, Offer, Request, Ack.",
+     "frame": {
+      "extra": "DHCP Request → Ack"
+     }
+    },
+    {
+     "at": "pc",
+     "type": "end",
+     "ok": true,
+     "layer": "Resultado",
+     "title": "O PC está configurado",
+     "text": "IP 10.10.0.50, máscara /23, gateway 10.10.0.1 e DNS 10.10.10.67. Um único servidor atende todas as VLANs, cada uma com seu escopo.",
+     "cmd": "ipconfig"
+    }
+   ]
+  },
+  {
+   "id": "visit",
+   "label": "Acesso visitante",
+   "ret": true,
+   "steps": [
+    {
+     "at": "vis",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "O visitante envia pelo Wi-Fi público",
+     "text": "O celular quer falar com um destino fora de 10.10.8.0/23 (você escolhe qual quando o pacote chegar ao core). O quadro vai para o gateway 10.10.8.1, pelo ar, em formato 802.11.",
+     "frame": {
+      "macD": "MAC da SVI 40",
+      "macS": "MAC do celular",
+      "tag": "sem tag (802.11)",
+      "ipS": "10.10.8.20",
+      "ipD": "a escolher no core",
+      "extra": "Pacote do visitante"
+     }
+    },
+    {
+     "at": "apP",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "O AP converte 802.11 em Ethernet",
+     "text": "O AP é uma ponte entre o ar e o cabo. Ele entrega o quadro ao SW-T pela porta Fa0/2, de acesso na VLAN 40.",
+     "frame": {
+      "tag": "sem tag"
+     }
+    },
+    {
+     "at": "swT",
+     "type": "proc",
+     "layer": "Camada 2",
+     "title": "Tag da VLAN 40 no uplink",
+     "text": "O switch do térreo insere a tag 40. Este uplink só leva as VLANs 30, 40, 50 e 99: Dados e Voz nem chegam ao térreo.",
+     "cmd": "show interfaces trunk",
+     "frame": {
+      "tag": "VLAN 40"
+     }
+    },
+    {
+     "at": "core",
+     "type": "proc",
+     "layer": "Camada 2 → 3",
+     "title": "O core sobe o pacote para o roteamento",
+     "text": "O MAC de destino é o da SVI 40. O core retira o cabeçalho de enlace e passa o pacote IP adiante.",
+     "frame": {
+      "macD": "—",
+      "macS": "—",
+      "tag": "removida"
+     }
+    },
+    {
+     "at": "core",
+     "type": "choice",
+     "layer": "Camada 3",
+     "title": "O destino é rede interna?",
+     "text": "A ACL de entrada da SVI 40 nega qualquer destino em 10.10.0.0/16 e permite o resto. Escolha para onde o visitante está tentando ir.",
+     "cmd": "show access-lists",
+     "options": [
+      {
+       "label": "Não · 203.0.113.10 (internet)",
+       "steps": [
+        {
+         "at": "core",
+         "type": "proc",
+         "layer": "Camada 3",
+         "title": "Permitido: rota padrão para o roteador",
+         "text": "203.0.113.10 é externo, então a ACL permite. Nenhuma rota específica serve, e vale 0.0.0.0/0 via 10.10.255.1, por uma porta roteada, sem VLAN.",
+         "cmd": "show ip route",
+         "frame": {
+          "macD": "MAC do roteador",
+          "macS": "MAC do core",
+          "tag": "sem tag (porta roteada)",
+          "ipD": "203.0.113.10",
+          "extra": "Página web (TCP 80)"
+         }
+        },
+        {
+         "at": "router",
+         "type": "proc",
+         "layer": "Camada 3",
+         "title": "NAT/PAT troca o endereço de origem",
+         "text": "Endereços 10.x não circulam na internet. O roteador troca a origem pelo endereço público e por uma porta, e anota a troca na tabela.",
+         "cmd": "show ip nat translations",
+         "frame": {
+          "macD": "MAC do próximo salto",
+          "macS": "MAC do roteador",
+          "tag": "sem tag",
+          "ipS": "198.51.100.2 (público)"
+         }
+        },
+        {
+         "at": "internet",
+         "type": "end",
+         "ok": true,
+         "layer": "Entrega",
+         "title": "O pacote sai para a internet",
+         "text": "O destino só enxerga o endereço público. Na volta, o roteador desfaz a tradução e o core entrega a resposta na VLAN 40."
+        }
+       ]
+      },
+      {
+       "label": "Sim · 10.10.10.67 (datacenter)",
+       "steps": [
+        {
+         "at": "core",
+         "type": "end",
+         "ok": false,
+         "layer": "Descarte",
+         "title": "O core descarta o pacote",
+         "text": "10.10.10.67 está dentro de 10.10.0.0/16, então a regra deny casa com o pacote. Ele nunca chega ao SW-DC e o ping do visitante falha. O contador da regra deny aumenta: é a evidência do bloqueio.",
+         "cmd": "show access-lists",
+         "frame": {
+          "ipD": "10.10.10.67",
+          "extra": "Ping (ICMP)"
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
+</script>
+
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById('fluxo-data').textContent);
+  var NS = 'http://www.w3.org/2000/svg';
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var canvas = document.getElementById('canvas'), svg = document.getElementById('svg');
+  var scroller = document.getElementById('scroller'), frameEl = document.getElementById('frame');
+  var count = document.getElementById('count');
+  var bPrev = document.getElementById('bPrev'), bNext = document.getElementById('bNext');
+  var bPlay = document.getElementById('bPlay'), bReset = document.getElementById('bReset');
+  var NW = 140, W = 1170;
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function sv(tag, cls) {
+    var e = document.createElementNS(NS, tag);
+    if (cls) e.setAttribute('class', cls);
+    return e;
+  }
+
+  /* ---------- mapa: colunas, nós e enlaces ---------- */
+  DATA.cols.forEach(function (c) {
+    var h = el('div', 'colh', c[1]);
+    h.style.left = c[0] + 'px';
+    canvas.appendChild(h);
+  });
+
+  var N = {};
+  DATA.nodes.forEach(function (n) {
+    var d = el('div', 'node' + (n.core ? ' core' : ''));
+    d.style.left = n.x + 'px'; d.style.top = n.y + 'px'; d.style.height = n.h + 'px';
+    d.appendChild(el('div', 'nm', n.name));
+    (n.sub || []).forEach(function (s) { d.appendChild(el('div', 'sb', s)); });
+    (n.rows || []).forEach(function (r) {
+      var row = el('div', 'row');
+      row.appendChild(el('span', '', r[0]));
+      row.appendChild(el('b', '', r[1]));
+      d.appendChild(row);
+    });
+    canvas.appendChild(d);
+    N[n.id] = { d: n, el: d, cx: n.x + NW / 2, cy: n.y + n.h / 2 };
+  });
+
+  var L = [], adj = {};
+  DATA.links.forEach(function (l, i) {
+    var a = N[l.a], b = N[l.b];
+    var x1 = a.d.x + NW, y1 = l.ya || a.cy, x2 = b.d.x, y2 = l.yb || b.cy, dx = (x2 - x1) / 2;
+    var p = sv('path', 'lk' + (l.wifi ? ' wifi' : ''));
+    p.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + y1 + ',' + (x2 - dx) + ' ' + y2 + ',' + x2 + ' ' + y2);
+    svg.appendChild(p);
+    var o = { a: l.a, b: l.b, path: p, len: p.getTotalLength(), pts: [] };
+    L.push(o);
+    (adj[l.a] = adj[l.a] || []).push({ to: l.b, link: o, fwd: true });
+    (adj[l.b] = adj[l.b] || []).push({ to: l.a, link: o, fwd: false });
+  });
+  if (!reduce) {
+    L.forEach(function (o, i) {
+      [0, 0.5].forEach(function (ph) {
+        var c = sv('circle', 'pt'); c.setAttribute('r', 2.2); svg.appendChild(c);
+        o.pts.push({ c: c, ph: (ph + i * 0.13) % 1, dir: 1 });
+      });
+      var v = sv('circle', 'pt v'); v.setAttribute('r', 2); svg.appendChild(v);
+      o.pts.push({ c: v, ph: (0.3 + i * 0.21) % 1, dir: -1 });
+    });
+  }
+  var rpk = sv('circle', 'rpk'); rpk.setAttribute('r', 5); rpk.style.display = 'none'; svg.appendChild(rpk);
+  var pkt = sv('circle', 'pkt'); pkt.setAttribute('r', 7); svg.appendChild(pkt);
+
+  var balloon = el('div', 'balloon hide');
+  canvas.appendChild(balloon);
+
+  /* caminho mais curto entre dois nós, como lista de {link, fwd, to} */
+  function route(from, to) {
+    if (from === to) return [];
+    var prev = {}, q = [from], seen = {}; seen[from] = true;
+    while (q.length) {
+      var u = q.shift();
+      if (u === to) break;
+      (adj[u] || []).forEach(function (e) {
+        if (!seen[e.to]) { seen[e.to] = true; prev[e.to] = { from: u, e: e }; q.push(e.to); }
+      });
+    }
+    var out = [], cur = to;
+    while (cur !== from && prev[cur]) { out.unshift(prev[cur].e); cur = prev[cur].from; }
+    return out;
+  }
+  function pointOn(seg, t) {
+    return seg.link.path.getPointAtLength(seg.link.len * (seg.fwd ? t : 1 - t));
+  }
+  function setPkt(circle, node) {
+    circle.setAttribute('cx', node.cx); circle.setAttribute('cy', node.cy);
+  }
+
+  /* ---------- estado ---------- */
+  var sc = null, idx = 0, frames = [], playing = false, waitT = null;
+  var move = null, ret = null;
+
+  function buildFrames(steps) {
+    var out = [], cur = {};
+    steps.forEach(function (s) {
+      var next = {};
+      DATA.fields.forEach(function (f) { next[f[0]] = cur[f[0]]; });
+      if (s.frame) Object.keys(s.frame).forEach(function (k) { next[k] = s.frame[k]; });
+      out.push(next); cur = next;
+    });
+    return out;
+  }
+
+  var chips = [], scBar = document.getElementById('scBar');
+  DATA.scenarios.forEach(function (s) {
+    var b = el('button', 'chip', s.label);
+    b.type = 'button';
+    b.addEventListener('click', function () { load(s); });
+    chips.push({ b: b, s: s });
+    scBar.appendChild(b);
+  });
+
+  function load(s) {
+    stop();
+    sc = s;
+    if (!s.base) s.base = s.steps;
+    s.steps = s.base.slice();
+    s.steps.forEach(function (x) { if (x.type === 'choice') x.picked = null; });
+    frames = buildFrames(s.steps);
+    chips.forEach(function (c) { c.b.setAttribute('aria-pressed', String(c.s === s)); });
+    jump(0);
+  }
+
+  function paint() {
+    var seenN = {}, seenL = [];
+    for (var i = 0; i <= idx; i++) {
+      seenN[sc.steps[i].at] = true;
+      if (i > 0) route(sc.steps[i - 1].at, sc.steps[i].at).forEach(function (e) { seenL.push(e.link); seenN[e.to] = true; });
+    }
+    var st = sc.steps[idx];
+    Object.keys(N).forEach(function (id) {
+      var n = N[id];
+      n.el.classList.toggle('seen', !!seenN[id]);
+      n.el.classList.toggle('cur', id === st.at);
+      n.el.classList.toggle('blocked', id === st.at && st.type === 'end' && !st.ok);
+    });
+    L.forEach(function (o) {
+      var on = seenL.indexOf(o) >= 0;
+      o.path.classList.toggle('on', on);
+      o.pts.forEach(function (p) { p.c.classList.toggle('on', on); });
+    });
+    pkt.setAttribute('class', 'pkt' + (st.type === 'end' ? (st.ok ? ' ok' : ' bad') : ''));
+    bPrev.disabled = idx === 0;
+    bNext.disabled = idx === sc.steps.length - 1;
+    var lastSt = sc.steps[sc.steps.length - 1];
+    count.textContent = 'Passo ' + (idx + 1) + (lastSt.type === 'choice' ? ' · o caminho depende da sua escolha' : ' de ' + sc.steps.length);
+    renderFrame();
+  }
+
+  function renderFrame() {
+    var fr = frames[idx], prev = idx > 0 ? frames[idx - 1] : null;
+    frameEl.textContent = '';
+    DATA.fields.forEach(function (f) {
+      var v = fr[f[0]] || '—';
+      var chg = !!prev && (prev[f[0]] || '—') !== v;
+      var cell = el('div', chg ? 'c' : '');
+      cell.appendChild(el('span', 'k', f[1]));
+      cell.appendChild(el('span', 'v', v));
+      frameEl.appendChild(cell);
+    });
+  }
+
+  function showBalloon() {
+    var st = sc.steps[idx], n = N[st.at], fr = frames[idx], prev = idx > 0 ? frames[idx - 1] : null;
+    balloon.textContent = '';
+    var pos = n.d.ball || 'below';
+    balloon.className = 'balloon ' + pos + (st.type === 'end' ? (st.ok ? ' ok' : ' bad') : '');
+    var meta = el('div', 'meta');
+    meta.appendChild(el('span', '', n.d.name + (st.type === 'dec' || st.type === 'choice' ? ' · decisão' : '')));
+    meta.appendChild(el('span', '', st.layer));
+    balloon.appendChild(meta);
+    balloon.appendChild(el('h2', '', st.title));
+    if (st.type === 'end') balloon.appendChild(el('p', 'res', st.ok ? 'Entregue' : 'Bloqueado'));
+    balloon.appendChild(el('p', '', st.text));
+    if (st.type === 'dec') {
+      var a = el('p', 'ans', 'Resposta: ' + st.answer + '. ');
+      a.appendChild(el('span', '', st.other));
+      balloon.appendChild(a);
+    }
+    if (st.type === 'choice') {
+      var box = el('div', 'opts');
+      st.options.forEach(function (o, i) {
+        var b = el('button', 'opt', o.label);
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(st.picked === i));
+        b.addEventListener('click', function () { choose(st, i); });
+        box.appendChild(b);
+      });
+      balloon.appendChild(box);
+      balloon.appendChild(el('p', 'hintc', st.picked == null ? 'Escolha uma resposta para o pacote seguir.' : 'Você pode escolher o outro caminho quando quiser.'));
+    }
+    var chg = el('div', 'chg');
+    DATA.fields.forEach(function (f) {
+      var v = fr[f[0]] || '—', old = prev ? (prev[f[0]] || '—') : '—';
+      if (v !== old) {
+        var row = el('div', '');
+        row.appendChild(el('span', '', f[1] + ': '));
+        row.appendChild(document.createTextNode(v));
+        chg.appendChild(row);
+      }
+    });
+    if (chg.children.length) balloon.appendChild(chg);
+    if (st.cmd) balloon.appendChild(el('div', 'cmd', st.cmd));
+    var left = Math.max(8, Math.min(W - 328, n.cx - 160));
+    balloon.style.left = left + 'px';
+    balloon.style.top = (pos === 'below' ? n.d.y + n.d.h + 14 : n.d.y - 14) + 'px';
+    var ar = el('div', 'arrow');
+    ar.style.left = Math.max(18, Math.min(302, n.cx - left)) + 'px';
+    balloon.appendChild(ar);
+    var target = Math.max(0, n.cx - scroller.clientWidth / 2);
+    if (scroller.scrollWidth > scroller.clientWidth) {
+      if (reduce || !scroller.scrollTo) scroller.scrollLeft = target;
+      else scroller.scrollTo({ left: target, behavior: 'smooth' });
+    }
+  }
+
+  function choose(st, i) {
+    if (move) return;
+    stop(); cancelReturn();
+    st.picked = i;
+    var k = sc.steps.indexOf(st);
+    sc.steps = sc.steps.slice(0, k + 1).concat(st.options[i].steps);
+    frames = buildFrames(sc.steps);
+    idx = k;
+    advance();
+  }
+
+  function arrived() {
+    paint();
+    showBalloon();
+    var st = sc.steps[idx];
+    if (st.type === 'end' && st.ok && sc.ret && !reduce) startReturn();
+    if (playing) {
+      if (idx >= sc.steps.length - 1) { stop(); return; }
+      waitT = setTimeout(function () { waitT = null; advance(); }, 2200 + st.text.length * 24);
+    }
+  }
+
+  function jump(i) {
+    move = null; cancelReturn();
+    idx = Math.max(0, Math.min(sc.steps.length - 1, i));
+    setPkt(pkt, N[sc.steps[idx].at]);
+    arrived();
+  }
+
+  function advance() {
+    if (idx >= sc.steps.length - 1) return;
+    cancelReturn();
+    var from = sc.steps[idx].at, to = sc.steps[idx + 1].at;
+    var segs = route(from, to);
+    idx++;
+    if (!segs.length || reduce) { setPkt(pkt, N[to]); arrived(); return; }
+    balloon.classList.add('hide');
+    N[from].el.classList.remove('cur');
+    pkt.setAttribute('class', 'pkt');
+    move = { segs: segs, i: 0, t0: performance.now(), dur: 750 };
+  }
+
+  function startReturn() {
+    var ids = [];
+    sc.steps.forEach(function (s) { if (ids[ids.length - 1] !== s.at) ids.push(s.at); });
+    var segs = [];
+    for (var i = ids.length - 1; i > 0; i--) segs = segs.concat(route(ids[i], ids[i - 1]));
+    if (!segs.length) return;
+    rpk.style.display = '';
+    ret = { segs: segs, i: 0, t0: performance.now() + 500, dur: 520 };
+  }
+  function cancelReturn() { ret = null; rpk.style.display = 'none'; }
+
+  function stop() {
+    playing = false;
+    if (waitT) { clearTimeout(waitT); waitT = null; }
+    bPlay.textContent = 'Reproduzir';
+  }
+  function play() {
+    if (idx === sc.steps.length - 1) {
+      if (sc.steps[idx].type === 'choice') return;
+      jump(0);
+    }
+    playing = true;
+    bPlay.textContent = 'Pausar';
+    waitT = setTimeout(function () { waitT = null; advance(); }, 1600);
+  }
+
+  bPrev.addEventListener('click', function () { stop(); jump(idx - 1); });
+  bNext.addEventListener('click', function () { stop(); if (!move) advance(); });
+  bReset.addEventListener('click', function () { stop(); jump(0); });
+  bPlay.addEventListener('click', function () { if (playing) stop(); else play(); });
+
+  /* ---------- laço de animação ---------- */
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function stepAnim(a, circle, now) {
+    if (now < a.t0) return false;
+    var t = (now - a.t0) / a.dur;
+    if (t >= 1) {
+      a.i++; a.t0 = now; t = 0;
+      if (a.i >= a.segs.length) return true;
+    }
+    var p = pointOn(a.segs[a.i], ease(t));
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    return false;
+  }
+  function tick(now) {
+    L.forEach(function (o) {
+      o.pts.forEach(function (p) {
+        var t = (p.ph + now / (o.len * 22)) % 1;
+        var pt = o.path.getPointAtLength(o.len * (p.dir > 0 ? t : 1 - t));
+        p.c.setAttribute('cx', pt.x); p.c.setAttribute('cy', pt.y);
+      });
+    });
+    if (move && stepAnim(move, pkt, now)) {
+      move = null;
+      setPkt(pkt, N[sc.steps[idx].at]);
+      arrived();
+    }
+    if (ret && stepAnim(ret, rpk, now)) cancelReturn();
+    requestAnimationFrame(tick);
+  }
+
+  load(DATA.scenarios[0]);
+  requestAnimationFrame(tick);
+})();
+</script>

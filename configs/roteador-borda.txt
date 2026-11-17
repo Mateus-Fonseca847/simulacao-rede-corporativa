@@ -1,0 +1,319 @@
+!
+version 12.4
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R-BORDA
+!
+!
+!
+enable secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+username admin secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name empresa.local
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ description LINK-CORE
+ ip address 10.10.255.1 255.255.255.252
+ ip nat inside
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ description INTERNET
+ ip address 203.0.113.1 255.255.255.0
+ ip nat outside
+ duplex auto
+ speed auto
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+ip nat inside source list 1 interface FastEthernet0/1 overload
+ip classless
+ip route 10.10.0.0 255.255.0.0 10.10.255.2 
+!
+ip flow-export version 9
+!
+!
+access-list 1 remark NAT-INTERNO
+access-list 1 permit 10.10.0.0 0.0.1.255
+access-list 1 permit 10.10.4.0 0.0.3.255
+access-list 1 permit 10.10.8.0 0.0.1.255
+access-list 1 permit 10.10.10.64 0.0.0.63
+access-list 10 remark GERENCIA-VTY
+access-list 10 permit 10.10.10.128 0.0.0.31
+!
+!
+!
+!
+!
+!
+telephony-service
+ max-ephones 30
+ max-dn 30
+ ip source-address 10.10.255.1 port 2000
+ auto assign 1 to 30
+!
+ephone-dn 1
+ number 1001
+!
+ephone-dn 2
+ number 1002
+!
+ephone-dn 3
+ number 1003
+!
+ephone-dn 4
+ number 1004
+!
+ephone-dn 5
+ number 1005
+!
+ephone-dn 6
+ number 1006
+!
+ephone-dn 7
+ number 1007
+!
+ephone-dn 8
+ number 1008
+!
+ephone-dn 9
+ number 1009
+!
+ephone-dn 10
+ number 1010
+!
+ephone-dn 11
+ number 1011
+!
+ephone-dn 12
+ number 1012
+!
+ephone-dn 13
+ number 1013
+!
+ephone-dn 14
+ number 1014
+!
+ephone-dn 15
+ number 1015
+!
+ephone-dn 16
+ number 1016
+!
+ephone-dn 17
+ number 1017
+!
+ephone-dn 18
+ number 1018
+!
+ephone-dn 19
+ number 1019
+!
+ephone-dn 20
+ number 1020
+!
+ephone-dn 21
+ number 1021
+!
+ephone-dn 22
+ number 1022
+!
+ephone-dn 23
+ number 1023
+!
+ephone-dn 24
+ number 1024
+!
+ephone 1
+ device-security-mode none
+ mac-address 0001.C9DD.A58D
+ type 7960
+ button 1:1
+!
+ephone 2
+ device-security-mode none
+ mac-address 0002.16E3.DC07
+ type 7960
+ button 1:2
+!
+ephone 3
+ device-security-mode none
+ mac-address 00D0.BAC3.5039
+ type 7960
+ button 1:3
+!
+ephone 4
+ device-security-mode none
+ mac-address 0060.5C80.AAD7
+ type 7960
+ button 1:4
+!
+ephone 5
+ device-security-mode none
+ mac-address 0090.0C99.2720
+ type 7960
+ button 1:5
+!
+ephone 6
+ device-security-mode none
+ mac-address 0009.7C05.A331
+ type 7960
+ button 1:6
+!
+ephone 7
+ device-security-mode none
+ mac-address 00D0.BC2A.3614
+ type 7960
+ button 1:7
+!
+ephone 8
+ device-security-mode none
+ mac-address 00E0.F735.E212
+ type 7960
+ button 1:8
+!
+ephone 9
+ device-security-mode none
+ mac-address 0060.4739.8341
+ type 7960
+ button 1:9
+!
+ephone 10
+ device-security-mode none
+ mac-address 0001.963C.998A
+ type 7960
+ button 1:10
+!
+ephone 11
+ device-security-mode none
+ mac-address 000A.4109.0E4D
+ type 7960
+ button 1:11
+!
+ephone 12
+ device-security-mode none
+ mac-address 00E0.B0B9.0E33
+ type 7960
+ button 1:12
+!
+ephone 13
+ device-security-mode none
+ mac-address 0001.4396.2A4D
+ type 7960
+ button 1:13
+!
+ephone 14
+ device-security-mode none
+ mac-address 00D0.D321.529D
+ type 7960
+ button 1:14
+!
+ephone 15
+ device-security-mode none
+ mac-address 0004.9A14.7D0D
+ type 7960
+ button 1:15
+!
+ephone 16
+ device-security-mode none
+ mac-address 0001.C923.8CAE
+ type 7960
+ button 1:16
+!
+ephone 17
+ device-security-mode none
+ mac-address 0002.4AE3.5D84
+ type 7960
+ button 1:17
+!
+ephone 18
+ device-security-mode none
+ mac-address 0060.47C6.DA86
+ type 7960
+ button 1:18
+!
+ephone 19
+ device-security-mode none
+ mac-address 0060.47E5.1923
+ type 7960
+ button 1:19
+!
+ephone 20
+ device-security-mode none
+ mac-address 0000.0CC0.A1B3
+ type 7960
+ button 1:20
+!
+ephone 21
+ device-security-mode none
+ mac-address 00E0.F923.3871
+ type 7960
+ button 1:21
+!
+ephone 22
+ device-security-mode none
+ mac-address 0002.17D7.63A4
+ type 7960
+ button 1:22
+!
+ephone 23
+ device-security-mode none
+ mac-address 0001.C7C8.E512
+ type 7960
+ button 1:23
+!
+ephone 24
+ device-security-mode none
+ mac-address 0030.A305.2BE9
+ type 7960
+ button 1:24
+!
+line con 0
+ logging synchronous
+!
+line aux 0
+!
+line vty 0 4
+ access-class 10 in
+ login local
+ transport input ssh
+!
+!
+!
+end
+

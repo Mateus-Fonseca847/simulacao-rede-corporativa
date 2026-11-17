@@ -1,0 +1,379 @@
+!
+version 12.2(37)SE1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname SW-A2
+!
+!
+no profinet
+enable secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+!
+!
+username admin secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name empresa.local
+!
+!
+vtp mode transparent
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+vlan 10
+ name DADOS
+!
+vlan 20
+ name VOZ
+!
+vlan 30
+ name WIFI-FUNC
+!
+vlan 40
+ name WIFI-PUBLICO
+!
+vlan 50
+ name IOT
+!
+vlan 60
+ name DATACENTER
+!
+vlan 99
+ name GERENCIA
+!
+vlan 998
+ name NATIVA
+!
+vlan 999
+ name PARKING
+!
+interface FastEthernet0/1
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0001.9725.D32D
+ switchport port-security mac-address sticky 0001.C9DD.A58D
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/2
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 00D0.BC2A.3614
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/3
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 00D0.BAC3.5039
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/4
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0090.0C99.2720
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/5
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0002.16E3.DC07
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/6
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0030.A305.2BE9
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/7
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0002.17D7.63A4
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/8
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0060.47E5.1923
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/9
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0060.5C80.AAD7
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/10
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0060.4739.8341
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/11
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 00E0.F923.3871
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/12
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0000.0CC0.A1B3
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/13
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 000A.4109.0E4D
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/14
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0001.963C.998A
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/15
+ description PC-FONE
+ switchport access vlan 10
+ switchport mode access
+ switchport voice vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0009.7C05.A331
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/16
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/17
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/18
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/19
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/20
+ description AP-FUNC
+ switchport access vlan 30
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/21
+ description IOT-COPA
+ switchport access vlan 50
+ switchport mode access
+ switchport port-security
+ switchport port-security mac-address sticky 
+ switchport port-security violation restrict 
+ switchport port-security mac-address sticky 0001.4308.7207
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/22
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/23
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/24
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet0/1
+ description UPLINK-CORE
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 10,20,30,50,99
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet0/2
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan99
+ description GERENCIA
+ mac-address 0001.9781.b501
+ ip address 10.10.10.133 255.255.255.224
+!
+ip default-gateway 10.10.10.129
+ip classless
+!
+ip flow-export version 9
+!
+!
+access-list 10 remark GERENCIA-VTY
+access-list 10 permit 10.10.10.128 0.0.0.31
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+!
+line aux 0
+!
+line vty 0 4
+ access-class 10 in
+ login local
+ transport input ssh
+!
+!
+!
+!
+end
+

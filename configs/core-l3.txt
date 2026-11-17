@@ -1,0 +1,349 @@
+!
+version 16.3.2
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname Core-L3
+!
+!
+no profinet
+enable secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+no ip cef
+ip routing
+!
+no ipv6 cef
+!
+!
+!
+username admin secret 5 $1$mERr$wrBEUllMkHQ/0wnz2eWld1
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name empresa.local
+!
+!
+vtp mode transparent
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+vlan 10
+ name DADOS
+!
+vlan 20
+ name VOZ
+!
+vlan 30
+ name WIFI-FUNC
+!
+vlan 40
+ name WIFI-PUBLICO
+!
+vlan 50
+ name IOT
+!
+vlan 60
+ name DATACENTER
+!
+vlan 99
+ name GERENCIA
+!
+vlan 998
+ name NATIVA
+!
+vlan 999
+ name PARKING
+!
+interface GigabitEthernet1/0/1
+ description UPLINK-SW-T
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 30,40,50,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/2
+ description UPLINK-SW-DC
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 60,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/3
+ description UPLINK-SW-A1
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 10,20,30,50,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/4
+ description UPLINK-SW-A2
+ switchport trunk native vlan 998
+ switchport trunk allowed vlan 10,20,30,50,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/5
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/6
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/7
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/8
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/9
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/10
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/11
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/12
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/13
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/14
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/15
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/16
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/17
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/18
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/19
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/20
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/21
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/22
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/23
+ description PARKING
+ switchport access vlan 999
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/24
+ description LINK-ROTEADOR
+ no switchport
+ ip address 10.10.255.2 255.255.255.252
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/1/1
+!
+interface GigabitEthernet1/1/2
+!
+interface GigabitEthernet1/1/3
+!
+interface GigabitEthernet1/1/4
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan10
+ description GW-DADOS
+ mac-address 0090.211b.1402
+ ip address 10.10.0.1 255.255.254.0
+ ip helper-address 10.10.10.66
+ ip access-group ACL-FUNCIONARIOS in
+!
+interface Vlan20
+ description GW-VOZ
+ mac-address 0090.211b.1403
+ ip address 10.10.2.1 255.255.254.0
+ ip helper-address 10.10.10.66
+ ip access-group ACL-VOZ in
+!
+interface Vlan30
+ description GW-WIFI-FUNC
+ mac-address 0090.211b.1404
+ ip address 10.10.4.1 255.255.252.0
+ ip helper-address 10.10.10.66
+ ip access-group ACL-FUNCIONARIOS in
+!
+interface Vlan40
+ description GW-WIFI-PUBLICO
+ mac-address 0090.211b.1405
+ ip address 10.10.8.1 255.255.254.0
+ ip helper-address 10.10.10.66
+ ip access-group ACL-PUBLICO in
+!
+interface Vlan50
+ description GW-IOT
+ mac-address 0090.211b.1406
+ ip address 10.10.10.1 255.255.255.192
+ ip helper-address 10.10.10.66
+ ip access-group ACL-IOT in
+!
+interface Vlan60
+ description GW-DATACENTER
+ mac-address 0090.211b.1407
+ ip address 10.10.10.65 255.255.255.192
+ ip access-group ACL-DATACENTER in
+!
+interface Vlan99
+ description GERENCIA
+ mac-address 0090.211b.1401
+ ip address 10.10.10.129 255.255.255.224
+ ip access-group ACL-GERENCIA in
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 10.10.255.1 
+!
+ip flow-export version 9
+!
+!
+ip access-list extended ACL-FUNCIONARIOS
+ permit udp any eq bootpc any eq bootps
+ deny ip any 10.10.2.0 0.0.1.255
+ deny ip any 10.10.8.0 0.0.1.255
+ deny ip any 10.10.10.0 0.0.0.63
+ permit icmp any host 10.10.10.130 echo-reply
+ permit tcp any host 10.10.10.130 established
+ deny ip any 10.10.10.128 0.0.0.31
+ permit ip any any
+ip access-list extended ACL-VOZ
+ permit udp any eq bootpc any eq bootps
+ permit udp 10.10.2.0 0.0.1.255 host 10.10.10.66 eq bootps
+ permit ip 10.10.2.0 0.0.1.255 host 10.10.255.1
+ permit ip 10.10.2.0 0.0.1.255 10.10.2.0 0.0.1.255
+ deny ip any any
+ip access-list extended ACL-PUBLICO
+ permit udp any eq bootpc any eq bootps
+ permit udp 10.10.8.0 0.0.1.255 host 10.10.10.66 eq bootps
+ deny ip any 10.10.0.0 0.0.255.255
+ permit ip any any
+ip access-list extended ACL-IOT
+ permit udp any eq bootpc any eq bootps
+ permit udp 10.10.10.0 0.0.0.63 host 10.10.10.66 eq bootps
+ permit ip 10.10.10.0 0.0.0.63 host 10.10.10.68
+ deny ip any any
+ip access-list extended ACL-DATACENTER
+ permit udp host 10.10.10.66 eq bootps any
+ permit udp host 10.10.10.67 eq domain any
+ permit tcp 10.10.10.64 0.0.0.63 any established
+ permit icmp 10.10.10.64 0.0.0.63 any echo-reply
+ permit ip host 10.10.10.68 10.10.10.0 0.0.0.63
+ deny ip 10.10.10.64 0.0.0.63 10.10.0.0 0.0.255.255
+ permit ip 10.10.10.64 0.0.0.63 any
+ip access-list extended ACL-GERENCIA
+ permit ip host 10.10.10.130 10.10.0.0 0.0.255.255
+ permit ip 10.10.10.128 0.0.0.31 10.10.10.128 0.0.0.31
+ deny ip any any
+access-list 10 remark GERENCIA-VTY
+access-list 10 permit 10.10.10.128 0.0.0.31
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+!
+line aux 0
+!
+line vty 0 4
+ access-class 10 in
+ login local
+ transport input ssh
+!
+!
+!
+!
+end
+
