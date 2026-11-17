@@ -1,6 +1,6 @@
 # Simulação de rede corporativa no Packet Tracer
 
-Projeto de **Redes de Computadores I** (CEFET/RJ): projetar e simular, no Cisco Packet Tracer, a rede de uma empresa com **300 funcionários** instalada em um **prédio histórico tombado de 3 andares** (térreo, 1º e 2º andar).
+Projeto de **Redes de Computadores I** (UFCIRJ): projetar e simular, no Cisco Packet Tracer, a rede de uma empresa com **300 funcionários** instalada em um **prédio histórico tombado de 3 andares** (térreo, 1º e 2º andar).
 
 O prédio é o que torna o problema interessante. Por ser tombado, o térreo não aceita piso elevado nem bandejamento, e ainda abriga um espaço de exposição aberto ao público. Isso obriga o projeto a resolver, ao mesmo tempo, três coisas que normalmente não convivem: **60 postos de trabalho sem cabo**, **visitantes na mesma planta** e **nenhum deles com acesso ao resto da empresa**.
 
@@ -129,4 +129,5 @@ Cada etapa tem seu roteiro de comandos em [`packet-tracer/`](packet-tracer/READM
 ---
 
 Mateus de Souza Fonseca — Engenharia de Computação, UFCIRJ *campus* Petrópolis.
+
 Fernando Correia — Engenharia de Computação, UFCIRJ *campus* Petrópolis.
