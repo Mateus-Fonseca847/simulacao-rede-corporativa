@@ -1,6 +1,8 @@
-# Simulação de rede corporativa — Packet Tracer
+# simulacao-rede-corporativa
 
-Trabalho da disciplina de **Redes de Computadores** (em dupla ou individual). Simulação, no Cisco Packet Tracer, de uma rede corporativa para uma empresa de 300 funcionários, instalada em um prédio histórico tombado de 3 andares.
+> Simulação, no Cisco Packet Tracer, de uma rede corporativa de 300 funcionários em um prédio histórico tombado de 3 andares — VLANs, Ethernet, VoIP, Wi-Fi corporativo/público e IoT.
+
+Trabalho da disciplina de **Redes de Computadores** (em dupla ou individual).
 
 ## Prazo
 
@@ -62,4 +64,4 @@ O `.pkt` é um arquivo binário (não dá para ver diff linha a linha), mas vale
 
 ## Declaração de uso de IA
 
-Parte da estrutura inicial deste repositório (README, checklists, esqueleto dos documentos de projeto) foi gerada com apoio de um modelo de linguagem (Claude, Anthropic), a partir do enunciado do trabalho. Confira a política da disciplina sobre uso de IA generativa antes da entrega; se exigida declaração formal, adapte o texto de `bd-t2-mensagens-cpf/DECLARACAO_IAG.md` (mesmo texto-modelo) para este trabalho.
+Parte da estrutura inicial deste repositório (README, checklists, esqueleto dos documentos de projeto) foi gerada com apoio de um modelo de linguagem (Claude, Anthropic), a partir do enunciado do trabalho. Confira a política da disciplina sobre uso de IA generativa antes da entrega; se exigida declaração formal, adapte o texto de `DECLARACAO_IAG.md` do repositório [`mensageria-identidade-unica`](https://github.com/Mateus-Fonseca847/mensageria-identidade-unica) (mesmo texto-modelo) para este trabalho.
